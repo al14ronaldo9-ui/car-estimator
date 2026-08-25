@@ -523,6 +523,32 @@
 
     </style>
 
+
+<style id="analysis-button-animation">
+  #analyzeButton.is-analyzing {
+    animation: softAnalyzePulse 2.8s ease-in-out infinite;
+    will-change: transform, box-shadow;
+  }
+
+  @keyframes softAnalyzePulse {
+    0%, 100% {
+      transform: translateY(0);
+      box-shadow: 0 8px 24px rgba(0, 229, 255, 0.18);
+    }
+
+    50% {
+      transform: translateY(-4px);
+      box-shadow: 0 13px 30px rgba(0, 229, 255, 0.30);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #analyzeButton.is-analyzing {
+      animation: none;
+    }
+  }
+</style>
+
 </head>
 <body>
 
@@ -1146,6 +1172,45 @@ ort.env.wasm.simd = false;
 buildLegend();
 loadModel();
 </script>
+
+<script id="analysis-button-animation-script">
+(() => {
+  const button = document.getElementById('analyzeButton');
+  if (!button || button.dataset.softAnimationReady) return;
+
+  button.dataset.softAnimationReady = 'true';
+
+  let watcher = null;
+
+  const stopAnimation = () => {
+    button.classList.remove('is-analyzing');
+    if (watcher) {
+      clearInterval(watcher);
+      watcher = null;
+    }
+  };
+
+  button.addEventListener('click', () => {
+    requestAnimationFrame(() => {
+      button.classList.add('is-analyzing');
+
+      watcher = setInterval(() => {
+        const resultCard = document.querySelector('#resultCard');
+
+        if (
+          !button.disabled ||
+          (resultCard && !resultCard.classList.contains('hidden'))
+        ) {
+          stopAnimation();
+        }
+      }, 250);
+    });
+  });
+
+  window.addEventListener('error', stopAnimation);
+})();
+</script>
+
 </body>
 </html>
 <!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
