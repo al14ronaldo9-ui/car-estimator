@@ -1220,15 +1220,79 @@ analyzeButton.addEventListener('click', async function () {
   }
 });
 
+async function fetchModelWithProgress(url) {
+  const cacheName = 'car-estimator-model-v1';
+  let cachedResponse = null;
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(cacheName);
+      cachedResponse = await cache.match(url);
+      if (cachedResponse) {
+        setStatus('مدل از حافظه موقت (کش) لود شد. در حال مقداردهی...');
+        return await cachedResponse.arrayBuffer();
+      }
+    } catch (err) {
+      console.warn('Cache API error:', err);
+    }
+  }
+
+  setStatus('در حال دانلود مدل هوش مصنوعی (۰٪)...');
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('دانلود ناموفق بود: ' + response.statusText);
+
+  const contentLength = response.headers.get('content-length');
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+  
+  if (!total || !response.body) {
+    const buf = await response.arrayBuffer();
+    return buf;
+  }
+
+  const reader = response.body.getReader();
+  let receivedLength = 0;
+  const chunks = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedLength += value.length;
+    const percent = Math.round((receivedLength / total) * 100);
+    setStatus(`در حال دانلود مدل هوش مصنوعی (${percent}٪)...`);
+  }
+
+  const allChunks = new Uint8Array(receivedLength);
+  let position = 0;
+  for (const chunk of chunks) {
+    allChunks.set(chunk, position);
+    position += chunk.length;
+  }
+
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(cacheName);
+      const clonedResp = new Response(allChunks.slice().buffer, {
+        headers: { 'Content-Type': 'application/octet-stream' }
+      });
+      await cache.put(url, clonedResp);
+    } catch (err) {
+      console.warn('Cache save error:', err);
+    }
+  }
+
+  return allChunks.buffer;
+}
+
 async function loadModel() {
   try {
-    setStatus('در حال بارگذاری مدل هوش مصنوعی (۴۷ مگابایت)...');
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.simd = true;
 
-    // تلاش برای لود مدل از مسیر نسبی
     const modelUrl = new URL('static/best.onnx', window.location.href).href;
-    session = await ort.InferenceSession.create(modelUrl, {
+    const modelBuffer = await fetchModelWithProgress(modelUrl);
+
+    setStatus('در حال مقداردهی موتور هوش مصنوعی...');
+    session = await ort.InferenceSession.create(modelBuffer, {
       executionProviders: ['wasm']
     });
     dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
