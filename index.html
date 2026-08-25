@@ -708,8 +708,8 @@ const INPUT_SIZE = 640;
 const PROTO_SIZE = 160;
 const NUM_CLASSES = 6;
 const NUM_COEFFS = 32;
-const CONF_THRESHOLD = 0.25;
-const IOU_THRESHOLD = 0.45;
+const CONF_THRESHOLD = 0.30;
+const IOU_THRESHOLD = 0.40;
 const MASK_THRESHOLD = 0.5;
 const MASK_SCALE = PROTO_SIZE / INPUT_SIZE;
 const CHANNEL_ORDER = 'RGB';
@@ -918,7 +918,12 @@ function analyzeOutput(detOut, protoOut, meta) {
   }
   dbg('تشخیص خام: ' + dets.length);
 
-  const kept = nms(dets);
+  const topDets = dets
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 40);
+
+  const kept = nms(topDets);
   dbg('پس از NMS: ' + kept.length);
 
   const results = [];
@@ -1009,7 +1014,7 @@ function drawResults(results, img, meta) {
 
     const label = `${CLASS_NAMES[r.classId]} ${Math.round(r.score * 100)}%`;
     const baseFont = Math.max(12, Math.round(img.naturalWidth / 45));
-    ctx.font = `bold ${baseFont}px Vazirmatn, Tahoma`;
+    ctx.font = `600 ${baseFont}px Vazirmatn, Tahoma, sans-serif`;
     const tw = ctx.measureText(label).width;
     const ly = by > (baseFont + 10) ? by - 8 : by + baseFont + 10;
 
