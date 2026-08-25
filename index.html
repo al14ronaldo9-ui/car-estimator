@@ -619,14 +619,16 @@ const CLASS_COLORS = [
   [168, 85, 247]
 ];
 
-const COST_RULES = [
-  { base: 600000, perArea: 2500000 },
-  { base: 300000, perArea: 1200000 },
-  { base: 800000, perArea: 1800000 },
-  { base: 1200000, perArea: 3500000 },
-  { base: 1500000, perArea: 2000000 },
-  { base: 2000000, perArea: 3000000 }
-];
+
+  const COST_RULES = [
+    { base: 5000000,  perArea: 3000000 }, // فرورفتگی
+    { base: 2000000,  perArea: 1500000 }, // خط و خش
+    { base: 4000000,  perArea: 4000000 }, // ترک
+    { base: 12000000, perArea: 6000000 }, // شیشه شکسته
+    { base: 5000000,  perArea: 4000000 }, // چراغ شکسته
+    { base: 3500000,  perArea: 2500000 }  // لاستیک پنچر
+  ];
+
 
 const INPUT_SIZE = 640;
 const PROTO_SIZE = 160;
@@ -892,34 +894,14 @@ function drawResults(results, img, meta) {
   ctx.textAlign = 'left';
   ctx.direction = 'ltr';
 
-  for (const r of results) {
-    const color = CLASS_COLORS[r.classId % CLASS_COLORS.length];
-    const cr = color[0];
-    const cg = color[1];
-    const cb = color[2];
-
-    const mc = document.createElement('canvas');
-    mc.width = PROTO_SIZE;
-    mc.height = PROTO_SIZE;
-
-    const mctx = mc.getContext('2d');
-    const imgData = mctx.createImageData(PROTO_SIZE, PROTO_SIZE);
-
-    const bx0 = Math.max(0, Math.floor(r.box640.x1 * MASK_SCALE));
-    const by0 = Math.max(0, Math.floor(r.box640.y1 * MASK_SCALE));
-    const bx1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.x2 * MASK_SCALE));
-    const by1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.y2 * MASK_SCALE));
-
-    for (let y = 0; y < PROTO_SIZE; y++) {
-      for (let x = 0; x < PROTO_SIZE; x++) {
-        const p = y * PROTO_SIZE + x;
-        const inBox = x >= bx0 && x < bx1 && y >= by0 && y < by1;
-        const on = inBox && r.mask160[p] > MASK_THRESHOLD;
-        imgData.data[p * 4] = cr;
-        imgData.data[p * 4 + 1] = cg;
-        imgData.data[p * 4 + 2] = cb;
-        imgData.data[p * 4 + 3] = on ? 110 : 0;
-      }
+      for (const r of results) {
+      counts[r.classId] = (counts[r.classId] || 0) + 1;
+      const rule = COST_RULES[r.classId];
+      const vehicleMultiplier = parseFloat(document.getElementById('vehicleSelect').value) || 1.0;
+      const cost = Math.round((rule.base + rule.perArea * r.areaFraction) * vehicleMultiplier / 10000) * 10000;
+      costs[r.classId] = (costs[r.classId] || 0) + cost;
+      total += cost;
+    }
     }
     mctx.putImageData(imgData, 0, 0);
 
@@ -1056,7 +1038,7 @@ if (needsCompress) {
         preview.src = url2;
         preview.style.display = 'block';
         overlay.style.display = 'none';
-        analyzeButton.disabled = !session;
+        analyzeButton.disabled = (!session || !document.getElementById("vehicleSelect").value);
         setStatus(session ? 'تصویر آماده است. روی «بررسی تصویر» بزن.' : 'مدل هنوز بارگذاری نشده...', session ? 'ok' : 'error');
       };
       img.onerror = function () {
