@@ -974,6 +974,7 @@ ort.env.wasm.simd = false;
       executionProviders: ['wasm']
     });
     dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
+    updateAnalyzeButton();
     setStatus('مدل آماده به کار است.', 'ok');
     if (currentImage) updateAnalyzeButton();
   } catch (e) {
