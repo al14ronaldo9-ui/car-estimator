@@ -882,12 +882,60 @@ imageInput.addEventListener('change', function () {
   if (!file) return;
 
   if (!file.type.startsWith('image/')) {
-    setStatus('لطفاً یک تصویر معتبر انتخاب کنید.', 'error');
-    return;
-  }
+  setStatus('لطفاً یک تصویر معتبر انتخاب کن.', 'error');
+  return;
+}
 
-  const url = URL.createObjectURL(file);
-  const img = new Image();
+const needsCompress = file.size > 600 * 1024;
+if (needsCompress) {
+  const url0 = URL.createObjectURL(file);
+  const tmp = new Image();
+  tmp.decoding = 'async';
+  tmp.onload = function () {
+    let w = tmp.naturalWidth, h = tmp.naturalHeight;
+    const scale = Math.min(1, 1280 / Math.max(w, h));
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(tmp, 0, 0, w, h);
+    URL.revokeObjectURL(url0);
+    c.toBlob(function (blob) {
+      if (!blob) {
+        setStatus('فشرده‌سازی تصویر ناموفق بود.', 'error');
+        return;
+      }
+      const url2 = URL.createObjectURL(blob);
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        currentImage = img;
+        preview.src = url2;
+        preview.style.display = 'block';
+        overlay.style.display = 'none';
+        analyzeButton.disabled = !session;
+        setStatus(session ? 'تصویر آماده است. روی «بررسی تصویر» بزن.' : 'مدل هنوز بارگذاری نشده...', session ? 'ok' : 'error');
+      };
+      img.onerror = function () {
+        setStatus('خطا در خواندن تصویر فشرده‌شده.', 'error');
+      };
+      img.src = url2;
+    }, 'image/jpeg', 0.82);
+  };
+  tmp.onerror = function () {
+    setStatus('خطا در خواندن تصویر.', 'error');
+  };
+  tmp.src = url0;
+  return;
+}
+
+const url = URL.createObjectURL(file);
+const img = new Image();
+img.decoding = 'async';
   img.onload = function () {
     currentImage = img;
     preview.src = url;
