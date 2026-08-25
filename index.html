@@ -1700,7 +1700,6 @@ function calculateRange(classId, areaFraction, multiplier) {
 
 function updateAnalyzeButton() {
   analyzeButton.disabled = !(session && currentImage && !!getVehicleSelection());
-}
 
 // ===== اتصال رویدادهای انتخاب خودرو =====
 const brandGroupSelect = document.getElementById('brandGroupSelect');
@@ -1758,7 +1757,25 @@ function showResultsWithOptions(results) {
         resultBody.appendChild(tr);
     }
 
+    
     totalCostEl.textContent = totalMin.toLocaleString('fa-IR') + ' تا ' + totalMax.toLocaleString('fa-IR') + ' تومان';
+
+    }
+    
+    // دکمه‌های جدید اشتراک‌گذاری و پاکسازی
+    let actionDiv = document.getElementById('dynamicActionButtons');
+    if (!actionDiv) {
+        actionDiv = document.createElement('div');
+        actionDiv.id = 'dynamicActionButtons';
+        actionDiv.style.cssText = 'margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;';
+        actionDiv.innerHTML = `
+            <button class="btn btn-secondary" onclick="shareReport()" style="padding: 8px 12px; font-size: 14px;">اشتراک‌گذاری گزارش</button>
+            <button class="btn btn-secondary" onclick="copyReportToClipboard()" style="padding: 8px 12px; font-size: 14px;">کپی متن برآورد</button>
+            <button class="btn btn-danger" onclick="resetApp()" style="padding: 8px 12px; font-size: 14px;">عکس جدید</button>
+        `;
+        totalCostEl.parentNode.appendChild(actionDiv);
+    }
+
     resultCard.classList.remove('hidden');
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -1817,6 +1834,64 @@ analyzeButton.addEventListener('click', async function () {
         updateAnalyzeButton();
     }
 });
+
+async function copyReportToClipboard() {
+    const vehicle = getVehicleSelection();
+    let text = 'برآورد هزینه خسارت خودرو:\n';
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    
+    document.querySelectorAll('#resultBody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 4) {
+            text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد (اطمینان: ${cells[2].textContent.trim()}) - هزینه: ${cells[3].textContent.trim()}\n`;
+        }
+    });
+    
+    const total = document.getElementById('totalCost');
+    if (total) text += `\nهزینه کل: ${total.textContent.trim()}\n`;
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        setStatus('متن برآورد با موفقیت کپی شد!', 'ok');
+    } catch (e) {
+        setStatus('خطا در کپی: ' + e.message, 'error');
+    }
+}
+
+async function shareReport() {
+    const vehicle = getVehicleSelection();
+    let text = 'برآورد هزینه خسارت خودرو:\n';
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    
+    document.querySelectorAll('#resultBody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 4) {
+            text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد - هزینه: ${cells[3].textContent.trim()}\n`;
+        }
+    });
+    
+    const total = document.getElementById('totalCost');
+    if (total) text += `\nهزینه کل: ${total.textContent.trim()}`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: 'گزارش برآورد خسارت', text: text });
+            setStatus('گزارش به اشتراک گذاشته شد.', 'ok');
+        } catch (e) {}
+    } else {
+        copyReportToClipboard();
+    }
+}
+
+function resetApp() {
+    currentImage = null;
+    document.getElementById('uploadButton').value = '';
+    document.getElementById('analyzeButton').disabled = true;
+    document.getElementById('resultCard').classList.add('hidden');
+    document.getElementById('resultBody').innerHTML = '';
+    setStatus('آماده برای انتخاب تصویر جدید.', 'info');
+}
+
 </script>
 </body>
 </html>
