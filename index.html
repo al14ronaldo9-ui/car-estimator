@@ -6,6 +6,80 @@
     <title>برآورد خسارت خودرو — هوش مصنوعی</title>
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
     <style>
+
+/* ===== Modern UI/UX Enhancements ===== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.card,
+.result-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
+  animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#loadingOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(59, 130, 246, 0.15);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20px;
+  font-family: Tahoma, sans-serif;
+  font-weight: bold;
+  color: #1e40af;
+}
+
+#analyzeButton:not(:disabled) {
+  animation: pulse 2s infinite;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
         @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
 
         :root {
@@ -1192,6 +1266,38 @@ loadModel();
 })();
 </script>
 
+
+<div id="loadingOverlay" aria-hidden="true">
+  <div class="spinner"></div>
+  <div class="loading-text">در حال تحلیل هوشمند تصویر...</div>
+</div>
+
+
+<script>
+function showLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+    overlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden", "true");
+  }
+}
+
+/*
+  این توابع عمومی هستند تا تابع اصلی تحلیل بتواند
+  در ابتدای تحلیل showLoading() و در پایان hideLoading() را صدا بزند.
+*/
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+</script>
+
 </body>
 </html>
 <!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
@@ -1581,6 +1687,7 @@ analyzeButton.removeEventListener('click', analyzeButton.click);
 analyzeButton.addEventListener('click', async function () {
     if (!session || !currentImage) return;
     analyzeButton.disabled = true;
+    showLoading();
     clearDbg();
     setStatus('در حال تحلیل تصویر... (چند ثانیه صبر کنید)');
 
@@ -1625,6 +1732,7 @@ analyzeButton.addEventListener('click', async function () {
         console.error(e);
         setStatus('خطا در تحلیل: ' + e.message, 'error');
     } finally {
+        hideLoading();
         updateAnalyzeButton();
     }
 });
