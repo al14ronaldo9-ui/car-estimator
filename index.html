@@ -830,14 +830,14 @@ function buildMask(coeffs, protoOut) {
     throw new Error('shape پروتوتایپ ماسک غیرمنتظره: [' + pd.join(',') + ']');
   }
 
-  const mask = new Float32Array(PROTO_SIZE * PROTO_SIZE);
+  const mask = new Uint8Array(PROTO_SIZE * PROTO_SIZE);
   for (let p = 0; p < PROTO_SIZE * PROTO_SIZE; p++) {
     let s = 0;
     for (let c = 0; c < NUM_COEFFS; c++) {
       const idx = channelFirst ? c * PROTO_SIZE * PROTO_SIZE + p : p * NUM_COEFFS + c;
       s += coeffs[c] * protos[idx];
     }
-    mask[p] = sigmoid(s);
+    mask[p] = s > 0 ? 1 : 0;
   }
   return mask;
 }
@@ -968,14 +968,24 @@ function drawResults(results, img, meta) {
   ctx.textAlign = 'left';
   ctx.direction = 'ltr';
 
-      for (const r of results) {
-      counts[r.classId] = (counts[r.classId] || 0) + 1;
-      const rule = COST_RULES[r.classId];
-      const vehicleMultiplier = parseFloat(document.getElementById('vehicleSelect').value) || 1.0;
-      const cost = Math.round((rule.base + rule.perArea * r.areaFraction) * vehicleMultiplier / 10000) * 10000;
-      costs[r.classId] = (costs[r.classId] || 0) + cost;
-      total += cost;
-    }
+  const mc = document.createElement('canvas');
+  mc.width = 160;
+  mc.height = 160;
+  const mctx = mc.getContext('2d');
+
+  for (const r of results) {
+    const [cr, cg, cb] = CLASS_COLORS[r.classId] || [255, 255, 255];
+    const imgData = mctx.createImageData(160, 160);
+    const data = imgData.data;
+
+    for (let i = 0; i < 160 * 160; i++) {
+      if (r.mask160[i]) {
+        const idx = i * 4;
+        data[idx] = cr;
+        data[idx + 1] = cg;
+        data[idx + 2] = cb;
+        data[idx + 3] = 100;
+      }
     }
     mctx.putImageData(imgData, 0, 0);
 
@@ -1013,6 +1023,7 @@ function drawResults(results, img, meta) {
   preview.style.display = 'block';
   overlay.style.display = 'block';
 }
+
 function showResults(results) {
   const counts = {};
   const costs = {};
