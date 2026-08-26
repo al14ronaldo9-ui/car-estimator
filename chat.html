@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>برآورد خسارت خودرو — هوش مصنوعی</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
+    <style>
+
+/* ===== Modern UI/UX Enhancements ===== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.card,
+.result-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
+  animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#loadingOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(59, 130, 246, 0.15);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20px;
+  font-family: Tahoma, sans-serif;
+  font-weight: bold;
+  color: #1e40af;
+}
+
+#analyzeButton:not(:disabled) {
+  animation: pulse 2s infinite;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+        @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+        :root {
+            --bg-gradient: linear-gradient(135deg, #090d16 0%, #05070c 100%);
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --border-glow: rgba(6, 182, 212, 0.15);
+            --border-hover: rgba(6, 182, 212, 0.4);
+            --primary: #06b6d4;
+            --secondary: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --danger: #f43f5e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Vazirmatn, Tahoma, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #030712; background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #030712 60%), radial-gradient(circle at 10% 90%, #065f46 0%, transparent 50%); background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        main {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(120deg, #38bdf8, #06b6d4, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        header .sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .picker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(6, 182, 212, 0.25);
+            border-radius: 16px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(15, 23, 42, 0.3);
+            transition: all 0.25s ease;
+        }
+
+        .picker:hover {
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .picker-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.4));
+        }
+
+        .picker-text {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+
+        .picker-subtext {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .picker input {
+            display: none;
+        }
+
+        .preview-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #020617;
+            margin-top: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #preview {
+            width: 100%;
+            height: auto;
+            display: none;
+            border-radius: 14px;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            border-radius: 14px;
+        }
+
+        #analyzeButton {
+            width: 100%;
+            padding: 15px;
+            margin-top: 16px;
+            border: 0;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.35);
+            transition: all 0.25s ease;
+        }
+
+        #analyzeButton:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(6, 182, 212, 0.5);
+        }
+
+        #analyzeButton:disabled {
+            background: #1e293b;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        #status {
+            margin-top: 14px;
+            font-size: 0.85rem;
+            text-align: center;
+            font-weight: 500;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        #status.ok {
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        #status.error {
+            color: var(--danger);
+            background: rgba(244, 63, 94, 0.08);
+            border-color: rgba(244, 63, 94, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #debugInfo {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(2, 6, 23, 0.85);
+            border: 1px dashed rgba(6, 182, 212, 0.3);
+            border-radius: 10px;
+            color: #7dd3fc;
+            font-family: 'Courier New', monospace;
+            font-size: 0.68rem;
+            line-height: 1.8;
+            direction: ltr;
+            text-align: left;
+            max-height: 170px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        #resultCard h2 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            background: rgba(15, 23, 42, 0.3);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(15, 23, 42, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        th, td {
+            padding: 12px 14px;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.6);
+            color: #38bdf8;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        td {
+            color: #e2e8f0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .total-row td {
+            background: rgba(6, 182, 212, 0.08);
+            color: #22d3ee;
+            font-weight: 800;
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(6, 182, 212, 0.3);
+        }
+    /* RESPONSIVE-FIX-GapGPT */
+@media (max-width: 700px) {
+  .options-panel {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 4px 0 !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+  }
+  .main-layout {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .upload-card,
+  .result-card,
+  .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .options-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .options-row select,
+  .options-row input,
+  .options-panel select,
+  .options-panel input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  body {
+    padding: 12px 10px !important;
+    align-items: flex-start !important;
+  }
+  main {
+    gap: 12px !important;
+  }
+  .picker {
+    padding: 20px 14px !important;
+  }
+  #analyzeButton {
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+  #debugInfo {
+    display: none !important;
+  }
+}
+/* END RESPONSIVE-FIX-GapGPT */
+
+        /* Kuri On Custom Modern Overrides */
+        body {
+            background-size: cover;
+        }
+        .card {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+        select, button, input {
+            font-family: Vazirmatn, Tahoma, sans-serif !important;
+        }
+        /* Make dropdowns look modern and sleek */
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        select:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+        /* Fix table / result card clutter on mobile */
+        .result-item, table {
+            width: 100%;
+        }
+        .damage-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .damage-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .damage-row .label {
+            color: #94a3b8;
+        }
+        .damage-row .value {
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+    body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}
+/* ===== بهینه‌سازی نمایش نتایج ===== */
+#resultCard {
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+#resultCard h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#resultCard .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#resultCard table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border, #30363d);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+}
+
+#resultCard th {
+  background: rgba(56,139,253,0.14);
+  color: #58a6ff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#resultCard th,
+#resultCard td {
+  padding: 12px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#resultCard th:first-child,
+#resultCard td:first-child {
+  text-align: right;
+}
+
+#resultCard tbody tr {
+  transition: background .2s rgba(56,139,253,0.08 background: rgba(56,139,253,0.08);
+}
+
+#resultCard tbody tr + tr td {
+  border-top: 1px solid rgba(148,163,184,0.16);
+}
+
+#resultCard .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+#resultCard .total-row td {
+ ,: 15px 10px;
+  border-top: 2px solid rgba(56,139,253,0.45);
+  background: rgba(56,139,253,0.12);
+  color: #f0f6fc;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+#totalCost {
+  color: #3fb950;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  #resultCard th,
+  #resultCard td {
+    padding: 10px 7px;
+    font-size: .88rem;
+  }
+
+  #resultCard .total-row td {
+    font-size: .96rem;
+  }
+}
+
+</style>
+
+<style>
+/* ترفند قطعی برای مرتب‌سازی موبایل و تک‌ستونه کردن */
+@media screen and (max-width: 900px) {
+  body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 10px !important;
+    margin: 0 !important;
+  }
+  main, .main-container, .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 5px !important;
+  }
+  /* تمام کارت‌ها، پنل‌ها و فرم‌ها پشت سر هم و تک‌ستونه */
+  .card, .options-panel, .upload-card, div[class*="panel"], div[class*="card"] {
+    width: 100% !important;
+    max-width: 420px !important;
+    margin: 6px 0 !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    position: static !important;
+    transform: none !important;
+  }
+  input, select, button {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+        /* Kuri On Custom Modern Overrides */
+        body {
+            background-size: cover;
+        }
+        .card {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+        select, button, input {
+            font-family: Vazirmatn, Tahoma, sans-serif !important;
+        }
+        /* Make dropdowns look modern and sleek */
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        select:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+        /* Fix table / result card clutter on mobile */
+        .result-item, table {
+            width: 100%;
+        }
+        .damage-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .damage-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .damage-row .label {
+            color: #94a3b8;
+        }
+        .damage-row .value {
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+    body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}</style>
+
+
+<style id="analysis-button-animation">
+  #analyzeButton.is-analyzing {
+    animation: softAnalyzePulse 2.8s ease-in-out infinite;
+    will-change: transform, box-shadow;
+  }
+
+  @keyframes softAnalyzePulse {
+    0%, 100% {
+      transform: translateY(0);
+      box-shadow: 0 8px 24px rgba(0, 229, 255, 0.18);
+    }
+
+    50% {
+      transform: translateY(-4px);
+      box-shadow: 0 13px 30px rgba(0, 229, 255, 0.30);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #analyzeButton.is-analyzing {
+      animation: none;
+    }
+  }
+body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}</style>
+
+<style>
+/* hide old floating buttons: bottom navigation is used instead */
+#chat-fab,
+#signup-fab {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+
+<main>
+    <header>
+        <h1>🚗 برآورد خسارت خودرو</h1>
+        <p class="sub">تشخیص هوشمند و محاسبه آنلاین آسیب‌های بدنه</p>
+    </header>
+
+    <section class="card">
+        <label class="picker" for="imageInput">
+            <span class="picker-icon">📸</span>
+            <span class="picker-text">انتخاب تصویر خودرو</span>
+            <span class="picker-subtext">تصویر باکیفیت و با نور کافی آپلود کنید</span>
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+
+        <div class="preview-wrapper">
+            <img id="preview" alt="پیش‌نمایش">
+            <canvas id="overlay"></canvas>
+        </div>
+
+        <div class="options-row" style="flex-wrap:wrap;gap:10px;">
+            <div style="flex:1 1 150px;display:flex;flex-direction:column;gap:6px;">
+                <label for="brandGroupSelect" style="font-size:0.85rem;color:var(--text-muted);">دسته خودرو</label>
+                <select id="brandGroupSelect" style="width:100%;">
+                    <option value="">انتخاب کنید...</option>
+                    <option value="iran_khodro">ایران‌خودرو</option>
+                    <option value="saipa">سایپا</option>
+                    <option value="montage">مونتاژی</option>
+                    <option value="import">وارداتی</option>
+                </select>
+            </div>
+            <div style="flex:1 1 150px;display:flex;flex-direction:column;gap:6px;">
+                <label for="vehicleModelSelect" style="font-size:0.85rem;color:var(--text-muted);">مدل خودرو</label>
+                <select id="vehicleModelSelect" disabled style="width:100%;">
+                    <option value="">ابتدا دسته خودرو را انتخاب کنید</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="analyzeButton" type="button" disabled>شروع آنالیز تصویر</button>
+        <p id="status">در حال راه‌اندازی مدل...</p>
+        <pre id="debugInfo" class="hidden"></pre>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+        <h2>📋 جزئیات خسارت برآورد شده</h2>
+        <div class="legend" id="legend"></div>
+        <div class="table-responsive">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th>نوع آسیب</th>
+                        <th style="text-align: center;">تعداد</th>
+                        <th style="text-align: center;">اطمینان</th>
+                    <th style="text-align: left;">بازه هزینه (تومان)</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="3">مجموع برآورد (حداقل تا حداکثر):</td>
+                        <td id="totalCost" style="text-align: left; font-size: 1rem;">۰</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div id="reportActions" style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button type="button" onclick="copyReportToClipboard()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#21262d;border:1px solid #30363d;color:#f0f6fc;">
+                📋 کپی گزارش
+            </button>
+
+            <button type="button" onclick="shareReport()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#21262d;border:1px solid #30363d;color:#f0f6fc;">
+                🔗 اشتراک‌گذاری
+            </button>
+
+            <button type="button" onclick="resetApp()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">
+                📷 عکس جدید
+            </button>
+        </div>
+
+    </section>
+</main>
+<script>
+const CLASS_NAMES = [
+  "فرورفتگی بدنه",
+  "خط و خش عمیق",
+  "ترک‌خوردگی",
+  "شیشه شکسته",
+  "شکستگی چراغ",
+  "لاستیک پنچر"
+];
+
+const CLASS_COLORS = [
+  [239, 68, 68],
+  [249, 115, 22],
+  [234, 179, 8],
+  [132, 204, 22],
+  [6, 182, 212],
+  [168, 85, 247]
+];
+
+
+  const COST_RULES = [
+    { base: 5000000,  perArea: 3000000 }, // فرورفتگی
+    { base: 2000000,  perArea: 1500000 }, // خط و خش
+    { base: 4000000,  perArea: 4000000 }, // ترک
+    { base: 12000000, perArea: 6000000 }, // شیشه شکسته
+    { base: 5000000,  perArea: 4000000 }, // چراغ شکسته
+    { base: 3500000,  perArea: 2500000 }  // لاستیک پنچر
+  ];
+
+
+const INPUT_SIZE = 640;
+const PROTO_SIZE = 160;
+const NUM_CLASSES = 6;
+const NUM_COEFFS = 32;
+const CONF_THRESHOLD = 0.30;
+const IOU_THRESHOLD = 0.40;
+const MASK_THRESHOLD = 0.5;
+const MASK_SCALE = PROTO_SIZE / INPUT_SIZE;
+const CHANNEL_ORDER = 'RGB';
+
+let session = null;
+let currentImage = null;
+
+const $ = id => document.getElementById(id);
+const imageInput = $('imageInput');
+const preview = $('preview');
+const overlay = $('overlay');
+const analyzeButton = $('analyzeButton');
+const statusEl = $('status');
+const resultCard = $('resultCard');
+const resultBody = $('resultBody');
+const totalCostEl = $('totalCost');
+const legendEl = $('legend');
+const debugEl = $('debugInfo');
+
+/* EARLIEST_UPDATE_ANALYZE_BUTTON_FALLBACK */
+window.updateAnalyzeButton = function () {
+  // تا تعریف کامل تابع در اسکریپت‌های بعدی، فقط از توقف برنامه جلوگیری می‌کند.
+};
+
+
+function dbg(msg) {
+  console.log('[debug]', msg);
+}
+
+function clearDbg() {
+  if (debugEl) {
+    debugEl.innerHTML = '';
+    debugEl.classList.add('hidden');
+  }
+}
+
+function setStatus(msg, type = '') {
+  statusEl.textContent = msg;
+  statusEl.className = type;
+}
+
+function sigmoid(x) {
+  return 1 / (1 + Math.exp(-x));
+}
+
+function letterbox(img, targetSize = 640) {
+  const canvas = document.createElement('canvas');
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#727272';
+  ctx.fillRect(0, 0, targetSize, targetSize);
+
+  const scale = Math.min(targetSize / img.naturalWidth, targetSize / img.naturalHeight);
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  const dx = (targetSize - w) / 2;
+  const dy = (targetSize - h) / 2;
+
+  ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, w, h);
+  return { canvas, scale, dx, dy, w, h };
+}
+
+function canvasToTensor(canvas) {
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const n = canvas.width * canvas.height;
+  const arr = new Float32Array(3 * n);
+
+  const rIdx = CHANNEL_ORDER === 'BGR' ? 2 : 0;
+  const bIdx = CHANNEL_ORDER === 'BGR' ? 0 : 2;
+
+  for (let i = 0; i < n; i++) {
+    arr[i] = d[i * 4 + rIdx] / 255.0;
+    arr[n + i] = d[i * 4 + 1] / 255.0;
+    arr[2 * n + i] = d[i * 4 + bIdx] / 255.0;
+  }
+  return new ort.Tensor('float32', arr, [1, 3, canvas.width, canvas.height]);
+}
+
+function calculateIoU(box1, box2) {
+  const x1 = Math.max(box1.x1, box2.x1);
+  const y1 = Math.max(box1.y1, box2.y1);
+  const x2 = Math.min(box1.x2, box2.x2);
+  const y2 = Math.min(box1.y2, box2.y2);
+
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const area1 = (box1.x2 - box1.x1) * (box1.y2 - box1.y1);
+  const area2 = (box2.x2 - box2.x1) * (box2.y2 - box2.y1);
+  const union = area1 + area2 - inter;
+
+  return union <= 0 ? 0 : inter / union;
+}
+
+function nms(dets) {
+  const sorted = dets.slice().sort((a, b) => b.score - a.score);
+  const keep = [];
+  const active = new Array(sorted.length).fill(true);
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (!active[i]) continue;
+    keep.push(sorted[i]);
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (active[j] && sorted[j].classId === sorted[i].classId &&
+          calculateIoU(sorted[i], sorted[j]) > IOU_THRESHOLD) {
+        active[j] = false;
+      }
+    }
+  }
+  return keep;
+}
+function buildMask(coeffs, protoOut) {
+  const pd = protoOut.dims;
+  const protos = protoOut.data;
+
+  let channelFirst = true;
+  if (pd.length === 4 && pd[1] === PROTO_SIZE && pd[2] === PROTO_SIZE && pd[3] === NUM_COEFFS) {
+    channelFirst = false;
+  } else if (pd.length === 4 && pd[1] === NUM_COEFFS) {
+    channelFirst = true;
+  } else {
+    throw new Error('shape پروتوتایپ ماسک غیرمنتظره: [' + pd.join(',') + ']');
+  }
+
+  const mask = new Uint8Array(PROTO_SIZE * PROTO_SIZE);
+  for (let p = 0; p < PROTO_SIZE * PROTO_SIZE; p++) {
+    let s = 0;
+    for (let c = 0; c < NUM_COEFFS; c++) {
+      const idx = channelFirst ? c * PROTO_SIZE * PROTO_SIZE + p : p * NUM_COEFFS + c;
+      s += coeffs[c] * protos[idx];
+    }
+    mask[p] = s > 0 ? 1 : 0;
+  }
+  return mask;
+}
+
+function analyzeOutput(detOut, protoOut, meta) {
+  const data = detOut.data;
+  const dims = detOut.dims;
+  const rowLenFull = 4 + NUM_CLASSES + NUM_COEFFS;
+  const rowLenObj = 4 + 1 + NUM_CLASSES + NUM_COEFFS;
+
+  let rowLen, dim, transposed;
+  if (dims.length === 3 && dims[1] === rowLenFull) {
+    rowLen = dims[1]; dim = dims[2]; transposed = false;
+  } else if (dims.length === 3 && dims[2] === rowLenFull) {
+    rowLen = dims[2]; dim = dims[1]; transposed = true;
+  } else if (dims.length === 3 && dims[1] === rowLenObj) {
+    rowLen = dims[1]; dim = dims[2]; transposed = false;
+  } else if (dims.length === 3 && dims[2] === rowLenObj) {
+    rowLen = dims[2]; dim = dims[1]; transposed = true;
+  } else {
+    throw new Error('shape خروجی تشخیص غیرمنتظره: [' + dims.join(',') + ']');
+  }
+
+  const hasObj = rowLen === rowLenObj;
+  const clsStart = hasObj ? 5 : 4;
+  const coeffStart = clsStart + NUM_CLASSES;
+
+  const get = (f, i) => transposed ? data[i * rowLen + f] : data[f * dim + i];
+
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < dim; i++) {
+    for (let c = 0; c < NUM_CLASSES; c++) {
+      const v = get(clsStart + c, i);
+      if (v < mn) mn = v;
+      if (v > mx) mx = v;
+    }
+  }
+  const useSigmoid = mn < -0.05 || mx > 1.05;
+  dbg('layout: ' + (transposed ? '[1,N,' + rowLen + ']' : '[1,' + rowLen + ',N]') + ' | N=' + dim +
+      (hasObj ? ' | همراه objectness' : '') + ' | scores: ' + (useSigmoid ? 'sigmoid (logit)' : 'خام (احتمال)'));
+
+  const dets = [];
+  for (let i = 0; i < dim; i++) {
+    let bestCls = -1;
+    let bestScore = -Infinity;
+
+    for (let c = 0; c < NUM_CLASSES; c++) {
+      const v = get(clsStart + c, i);
+      if (v > bestScore) {
+        bestScore = v;
+        bestCls = c;
+      }
+    }
+
+    let score = useSigmoid ? sigmoid(bestScore) : bestScore;
+    if (hasObj) score *= sigmoid(get(4, i));
+    if (bestCls < 0 || score < CONF_THRESHOLD) continue;
+
+    const cx = get(0, i);
+    const cy = get(1, i);
+    const w = get(2, i);
+    const h = get(3, i);
+
+    const coeffs = [];
+    for (let c = 0; c < NUM_COEFFS; c++) {
+      coeffs.push(get(coeffStart + c, i));
+    }
+
+    dets.push({
+      x1: cx - w / 2,
+      y1: cy - h / 2,
+      x2: cx + w / 2,
+      y2: cy + h / 2,
+      score,
+      classId: bestCls,
+      coeffs
+    });
+  }
+  dbg('تشخیص خام: ' + dets.length);
+
+  const topDets = dets
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 40);
+
+  const kept = nms(topDets);
+  dbg('پس از NMS: ' + kept.length);
+
+  const results = [];
+  for (const d of kept) {
+    const mask160 = buildMask(d.coeffs, protoOut);
+
+    const bx0 = Math.max(0, Math.floor(d.x1 * MASK_SCALE));
+    const by0 = Math.max(0, Math.floor(d.y1 * MASK_SCALE));
+    const bx1 = Math.min(PROTO_SIZE, Math.ceil(d.x2 * MASK_SCALE));
+    const by1 = Math.min(PROTO_SIZE, Math.ceil(d.y2 * MASK_SCALE));
+
+    let maskPixels = 0;
+    for (let y = by0; y < by1; y++) {
+      for (let x = bx0; x < bx1; x++) {
+        if (mask160[y * PROTO_SIZE + x] > MASK_THRESHOLD) maskPixels++;
+      }
+    }
+
+    const areaFraction = Math.min(1, (maskPixels * 16) / (meta.w * meta.h));
+    const box = {
+      x1: Math.max(0, (d.x1 - meta.dx) / meta.scale),
+      y1: Math.max(0, (d.y1 - meta.dy) / meta.scale),
+      x2: Math.min(meta.origW, (d.x2 - meta.dx) / meta.scale),
+      y2: Math.min(meta.origH, (d.y2 - meta.dy) / meta.scale)
+    };
+
+    results.push({
+      classId: d.classId,
+      score: d.score,
+      box,
+      box640: { x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2 },
+      mask160,
+      areaFraction
+    });
+  }
+  return results;
+}
+
+function drawResults(results, img, meta) {
+  overlay.width = img.naturalWidth;
+  overlay.height = img.naturalHeight;
+
+  const ctx = overlay.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+
+  ctx.lineWidth = Math.max(2, Math.round(img.naturalWidth / 250));
+  ctx.textAlign = 'left';
+  ctx.direction = 'ltr';
+
+  const mc = document.createElement('canvas');
+  mc.width = 160;
+  mc.height = 160;
+  const mctx = mc.getContext('2d');
+
+  for (const r of results) {
+    const [cr, cg, cb] = CLASS_COLORS[r.classId] || [255, 255, 255];
+    const imgData = mctx.createImageData(160, 160);
+    const data = imgData.data;
+
+    // ماسک فقط در محدودهٔ Bounding Box همان تشخیص نمایش داده می‌شود.
+    const mx0 = Math.max(0, Math.floor(r.box640.x1 * MASK_SCALE));
+    const my0 = Math.max(0, Math.floor(r.box640.y1 * MASK_SCALE));
+    const mx1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.x2 * MASK_SCALE));
+    const my1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.y2 * MASK_SCALE));
+
+    for (let y = my0; y < my1; y++) {
+      for (let x = mx0; x < mx1; x++) {
+        const i = y * PROTO_SIZE + x;
+        if (r.mask160[i]) {
+          const idx = i * 4;
+          data[idx] = cr;
+          data[idx + 1] = cg;
+          data[idx + 2] = cb;
+          data[idx + 3] = 100;
+        }
+      }
+    }
+    mctx.putImageData(imgData, 0, 0);
+
+    const sx = meta.dx * MASK_SCALE;
+    const sy = meta.dy * MASK_SCALE;
+    const sw = meta.w * MASK_SCALE;
+    const sh = meta.h * MASK_SCALE;
+
+    ctx.drawImage(mc, sx, sy, sw, sh, 0, 0, img.naturalWidth, img.naturalHeight);
+
+    const bx = r.box.x1;
+    const by = r.box.y1;
+    const bw = r.box.x2 - r.box.x1;
+    const bh = r.box.y2 - r.box.y1;
+
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},0.15)`;
+    ctx.fillRect(bx, by, bw, bh);
+
+    ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    const label = `${CLASS_NAMES[r.classId]} ${Math.round(r.score * 100)}%`;
+    const baseFont = Math.max(12, Math.round(img.naturalWidth / 45));
+    ctx.font = `600 ${baseFont}px Vazirmatn, Tahoma, sans-serif`;
+    const tw = ctx.measureText(label).width;
+    const ly = by > (baseFont + 10) ? by - 8 : by + baseFont + 10;
+
+    ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
+    ctx.fillRect(bx, ly - baseFont - 4, tw + 10, baseFont + 8);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, bx + 5, ly - 4);
+  }
+
+  preview.style.display = 'block';
+  overlay.style.display = 'block';
+}
+
+function showResults(results) {
+  const counts = {};
+  const costs = {};
+  let total = 0;
+
+  for (const r of results) {
+    counts[r.classId] = (counts[r.classId] || 0) + 1;
+    const rule = COST_RULES[r.classId];
+    const cost = Math.round((rule.base + rule.perArea * r.areaFraction) / 10000) * 10000;
+    costs[r.classId] = (costs[r.classId] || 0) + cost;
+    total += cost;
+  }
+
+  const summary = Object.keys(counts)
+    .map(k => CLASS_NAMES[k] + '=' + counts[k])
+    .join(' | ');
+  dbg('توزیع کلاس‌ها: ' + (summary || 'هیچ'));
+
+  resultBody.innerHTML = '';
+  let hasAny = false;
+
+  for (let c = 0; c < NUM_CLASSES; c++) {
+    if (!counts[c]) continue;
+    hasAny = true;
+    const color = CLASS_COLORS[c];
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <span class="dot" style="background: rgb(${color[0]},${color[1]},${color[2]})"></span>
+        ${CLASS_NAMES[c]}
+      </td>
+      <td style="text-align: center; font-weight: bold;">${counts[c]}</td>
+      <td style="text-align: left; font-weight: bold; color: #38bdf8;">${costs[c].toLocaleString('fa-IR')}</td>
+    `;
+    resultBody.appendChild(tr);
+  }
+
+  if (!hasAny) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="3" style="text-align: center; color: var(--text-muted);">آسیبی با اطمینان کافی تشخیص داده نشد.</td>';
+    resultBody.appendChild(tr);
+  }
+
+  totalCostEl.textContent = total.toLocaleString('fa-IR') + ' تومان';
+  resultCard.classList.remove('hidden');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function buildLegend() {
+  legendEl.innerHTML = '';
+  for (let i = 0; i < CLASS_NAMES.length; i++) {
+    const color = CLASS_COLORS[i];
+    const s = document.createElement('span');
+    s.innerHTML = `<span class="dot" style="background: rgb(${color[0]},${color[1]},${color[2]})"></span> ${CLASS_NAMES[i]}`;
+    legendEl.appendChild(s);
+  }
+}
+
+imageInput.addEventListener('change', function () {
+  const file = imageInput.files && imageInput.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+  setStatus('لطفاً یک تصویر معتبر انتخاب کن.', 'error');
+  return;
+}
+
+const needsCompress = file.size > 600 * 1024;
+if (needsCompress) {
+  const url0 = URL.createObjectURL(file);
+  const tmp = new Image();
+  tmp.decoding = 'async';
+  tmp.onload = function () {
+    let w = tmp.naturalWidth, h = tmp.naturalHeight;
+    const scale = Math.min(1, 1280 / Math.max(w, h));
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(tmp, 0, 0, w, h);
+    URL.revokeObjectURL(url0);
+    c.toBlob(function (blob) {
+      if (!blob) {
+        setStatus('فشرده‌سازی تصویر ناموفق بود.', 'error');
+        return;
+      }
+      const url2 = URL.createObjectURL(blob);
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        currentImage = img;
+        preview.src = url2;
+        preview.style.display = 'block';
+        overlay.style.display = 'none';
+        analyzeButton.disabled = (!session || !document.getElementById("vehicleSelect").value);
+        setStatus(session ? 'تصویر آماده است. روی «بررسی تصویر» بزن.' : 'مدل هنوز بارگذاری نشده...', session ? 'ok' : 'error');
+      };
+      img.onerror = function () {
+        setStatus('خطا در خواندن تصویر فشرده‌شده.', 'error');
+      };
+      img.src = url2;
+    }, 'image/jpeg', 0.82);
+  };
+  tmp.onerror = function () {
+    setStatus('خطا در خواندن تصویر.', 'error');
+  };
+  tmp.src = url0;
+  return;
+}
+
+const url = URL.createObjectURL(file);
+const img = new Image();
+img.decoding = 'async';
+  img.onload = function () {
+    currentImage = img;
+    preview.src = url;
+    preview.style.display = 'block';
+    overlay.style.display = 'none';
+    resultCard.classList.add('hidden');
+    clearDbg();
+    window.updateAnalyzeButton();
+    setStatus(session ? 'تصویر آماده است. روی «شروع آنالیز تصویر» بزنید.' : 'مدل هنوز بارگذاری نشده است...', session ? 'ok' : 'error');
+  };
+  img.onerror = function () {
+    setStatus('خطا در خواندن تصویر.', 'error');
+  };
+  img.src = url;
+});
+
+analyzeButton.addEventListener('click', async function () {
+    return; // هندلر قدیمی غیرفعال شد — مسیر فعال: showResultsWithOptions (رفع اجرای دوباره)
+  if (!session || !currentImage) return;
+  analyzeButton.disabled = true;
+  clearDbg();
+  setStatus('در حال تحلیل تصویر... (چند ثانیه صبر کنید)');
+
+  try {
+    const meta0 = letterbox(currentImage, INPUT_SIZE);
+    const tensor = canvasToTensor(meta0.canvas);
+    const feeds = { [session.inputNames[0]]: tensor };
+    const outputs = await session.run(feeds);
+
+    const names = Object.keys(outputs);
+    dbg('خروجی‌های مدل: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  '));
+
+    let out0 = null, out1 = null;
+    for (const nm of names) {
+      if (outputs[nm].dims.length === 3) out0 = outputs[nm];
+      if (outputs[nm].dims.length === 4) out1 = outputs[nm];
+    }
+
+    if (!out0) {
+      throw new Error('خروجی تشخیص (۳بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
+    }
+    if (!out1) {
+      throw new Error('خروجی پروتوتایپ ماسک (۴بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
+    }
+
+    const meta = {
+      scale: meta0.scale,
+      dx: meta0.dx,
+      dy: meta0.dy,
+      w: meta0.w,
+      h: meta0.h,
+      origW: currentImage.naturalWidth,
+      origH: currentImage.naturalHeight
+    };
+
+    const results = analyzeOutput(out0, out1, meta);
+
+    drawResults(results, currentImage, meta);
+    // رندر قدیمی غیرفعال شد؛ گزارش از مسیر showResultsWithOptions نمایش داده می‌شود
+
+    if (results.length === 0) {
+      setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + '). جزئیات فنی در باکس دیباگ.', 'error');
+    } else {
+      setStatus('تحلیل با موفقیت انجام شد — ' + results.length + ' آسیب شناسایی شد.', 'ok');
+    }
+  } catch (e) {
+    console.error(e);
+    setStatus('خطا در تحلیل: ' + e.message, 'error');
+  } finally {
+    window.updateAnalyzeButton();
+  }
+});
+
+async function fetchModelWithProgress(url) {
+  const cacheName = 'car-estimator-model-v1';
+  let cachedResponse = null;
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(cacheName);
+      cachedResponse = await cache.match(url);
+      if (cachedResponse) {
+        setStatus('مدل از حافظه موقت (کش) لود شد. در حال مقداردهی...');
+        return await cachedResponse.arrayBuffer();
+      }
+    } catch (err) {
+      console.warn('Cache API error:', err);
+    }
+  }
+
+  setStatus('در حال دانلود مدل هوش مصنوعی (۰٪)...');
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('دانلود ناموفق بود: ' + response.statusText);
+
+  const contentLength = response.headers.get('content-length');
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+  
+  if (!total || !response.body) {
+    const buf = await response.arrayBuffer();
+    return buf;
+  }
+
+  const reader = response.body.getReader();
+  let receivedLength = 0;
+  const chunks = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedLength += value.length;
+    const percent = Math.round((receivedLength / total) * 100);
+    setStatus(`در حال دانلود مدل هوش مصنوعی (${percent}٪)...`);
+  }
+
+  const allChunks = new Uint8Array(receivedLength);
+  let position = 0;
+  for (const chunk of chunks) {
+    allChunks.set(chunk, position);
+    position += chunk.length;
+  }
+
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(cacheName);
+      const clonedResp = new Response(allChunks.slice().buffer, {
+        headers: { 'Content-Type': 'application/octet-stream' }
+      });
+      await cache.put(url, clonedResp);
+    } catch (err) {
+      console.warn('Cache save error:', err);
+    }
+  }
+
+  return allChunks.buffer;
+}
+
+async function loadModel() {
+  try {
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.simd = false;
+
+    const modelUrl = new URL('static/best.onnx', window.location.href).href;
+    const modelBuffer = await fetchModelWithProgress(modelUrl);
+
+    setStatus('در حال مقداردهی موتور هوش مصنوعی...');
+    session = await ort.InferenceSession.create(modelBuffer, {
+      executionProviders: ['wasm']
+    });
+    dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
+    window.updateAnalyzeButton();
+    setStatus('مدل آماده به کار است.', 'ok');
+    if (currentImage) window.updateAnalyzeButton();
+  } catch (e) {
+    console.error(e);
+    setStatus('خطا در لود مدل: ' + e.message, 'error');
+  }
+}
+
+buildLegend();
+</script>
+
+<script id="analysis-button-animation-script">
+(() => {
+  const button = document.getElementById('analyzeButton');
+  if (!button || button.dataset.softAnimationReady) return;
+
+  button.dataset.softAnimationReady = 'true';
+
+  let watcher = null;
+
+  const stopAnimation = () => {
+    button.classList.remove('is-analyzing');
+    if (watcher) {
+      clearInterval(watcher);
+      watcher = null;
+    }
+  };
+
+  button.addEventListener('click', () => {
+    requestAnimationFrame(() => {
+      button.classList.add('is-analyzing');
+
+      watcher = setInterval(() => {
+        const resultCard = document.querySelector('#resultCard');
+
+        if (
+          !button.disabled ||
+          (resultCard && !resultCard.classList.contains('hidden'))
+        ) {
+          stopAnimation();
+        }
+      }, 250);
+    });
+  });
+
+  window.addEventListener('error', stopAnimation);
+})();
+</script>
+
+
+<div id="loadingOverlay" aria-hidden="true">
+  <div class="spinner"></div>
+  <div class="loading-text">در حال تحلیل هوشمند تصویر...</div>
+</div>
+
+
+<script>
+function showLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+    overlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.style.display = "none";
+    overlay.setAttribute("aria-hidden", "true");
+  }
+}
+
+/*
+  این توابع عمومی هستند تا تابع اصلی تحلیل بتواند
+  در ابتدای تحلیل showLoading() و در پایان hideLoading() را صدا بزند.
+*/
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+</script>
+
+<script>
+  // اجرای مدل پس از تعریف کامل توابع انتخاب خودرو
+</script>
+
+<!-- Global Chat -->
+<style id="global-chat-style">
+#chat-fab {
+  position: fixed !important;
+  left: 16px !important;
+  right: auto !important;
+  bottom: 18px !important;
+  width: 58px !important;
+  height: 58px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #ff4b2b, #ff416c) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.38) !important;
+  cursor: pointer;
+  z-index: 99999 !important;
+}
+#chat-fab:active { transform: scale(.92); }
+#chat-fab svg {
+  display: block !important;
+  width: 28px !important;
+  height: 28px !important;
+  fill: currentColor;
+}
+
+#chat-window {
+  position: fixed !important;
+  left: 16px !important;
+  bottom: 90px !important;
+  width: min(300px, calc(100vw - 32px)) !important;
+  height: 400px !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  border-radius: 15px !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55) !important;
+  z-index: 99999 !important;
+}
+#chat-window.active { display: flex !important; }
+.chat-header { padding: 15px; background: #252525; border-bottom: 1px solid #333; }
+.chat-header h3 { margin: 0; color: #fff; font-size: 14px; }
+
+#chat-messages {
+  display: flex !important;
+  flex: 1;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 10px;
+  overflow-y: auto;
+  color: #fff;
+}
+
+.msg { padding: 8px; margin: 5px 0; border-radius: 10px; font-size: 13px; }
+#chat-messages .msg.user {
+  background: #007bff !important;
+  color: #fff !important;
+  align-self: flex-end !important;
+  text-align: right !important;
+  max-width: 82% !important;
+}
+#chat-messages .msg.expert {
+  background: #333 !important;
+  color: #fff !important;
+  align-self: flex-start !important;
+  max-width: 82% !important;
+}
+
+.chat-input-area {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 64px !important;
+  padding: 10px !important;
+  background: #252525 !important;
+  border-top: 1px solid #444 !important;
+  box-sizing: border-box !important;
+}
+#chat-input {
+  display: block !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 0 12px !important;
+  margin: 0 !important;
+  background: #3a3a3a !important;
+  color: #fff !important;
+  border: 1px solid #666 !important;
+  border-radius: 9px !important;
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  text-align: right !important;
+  direction: rtl !important;
+  outline: none !important;
+}
+#chat-input::placeholder { color: #c7c7c7 !important; opacity: 1 !important; }
+#chat-send {
+  display: flex !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ff4b2b !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  font-size: 20px !important;
+}
+</style>
+
+<button id="chat-fab" type="button" aria-label="باز کردن گفتگو با کارشناس">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+  </svg>
+</button>
+
+<div id="chat-window">
+  <div class="chat-header"><h3>پشتیبانی آنلاین</h3></div>
+  <div id="chat-messages">
+    <div class="msg expert">سلام! چطور می‌توانم کمک کنم؟</div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chat-input" placeholder="پیام...">
+    <button id="chat-send" type="button">➤</button>
+  </div>
+</div>
+
+<script id="supabase-chat-script">
+(function () {
+  const SUPABASE_URL = 'https://zpobmwhvhqjcqmaoqtxq.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ruoLdqEOaFEuQjPt5e0Huw_KwKAOp4T';
+  const API_URL = SUPABASE_URL + '/rest/v1/messages';
+
+  const fab = document.getElementById('chat-fab');
+  const chatWindow = document.getElementById('chat-window');
+  const input = document.getElementById('chat-input');
+  const sendButton = document.getElementById('chat-send');
+  const messages = document.getElementById('chat-messages');
+
+  if (!fab || !chatWindow || !input || !sendButton || !messages) return;
+
+  function addMessage(text, type) {
+    const message = document.createElement('div');
+    message.className = 'msg ' + type;
+    message.textContent = text;
+    messages.appendChild(message);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function renderMessages(data) {
+    messages.innerHTML = '';
+    if (!data || data.length === 0) {
+      addMessage('سلام! چطور می‌توانم کمک کنم؟', 'expert');
+      return;
+    }
+    data.forEach(function (item) {
+      addMessage(item.text, item.sender === 'expert' ? 'expert' : 'user');
+    });
+  }
+
+  async function loadMessages() {
+    try {
+      const response = await fetch(
+        API_URL + '?select=id,text,sender,created_at&order=created_at.asc',
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+      );
+      if (!response.ok) throw new Error('خطا در دریافت پیام‌ها');
+      renderMessages(await response.json());
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function sendMessage(event) {
+    if (event) event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    sendButton.disabled = true;
+    input.value = '';
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ text: text, sender: 'user' })
+      });
+
+      if (!response.ok) throw new Error('خطا در ارسال پیام');
+      await loadMessages();
+    } catch (error) {
+      console.error(error);
+      addMessage('ارسال پیام ناموفق بود. اتصال اینترنت را بررسی کنید.', 'expert');
+      input.value = text;
+    } finally {
+      sendButton.disabled = false;
+      input.focus();
+    }
+  }
+
+  fab.onclick = function () {
+    chatWindow.classList.toggle('active');
+    if (chatWindow.classList.contains('active')) loadMessages();
+  };
+
+  sendButton.onclick = sendMessage;
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') sendMessage(event);
+  });
+
+  setInterval(function () {
+    if (chatWindow.classList.contains('active')) loadMessages();
+  }, 5000);
+})();
+</script>
+
+
+<!-- signup-link-v1 -->
+<style>
+  #signup-fab {
+    position: fixed;
+    left: 18px;
+    bottom: 150px;
+    z-index: 9998;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 24px;
+    background: #ff4b2b;
+    color: #fff;
+    text-decoration: none;
+    font-family: Tahoma, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    box-shadow: 0 5px 16px rgba(0,0,0,.35);
+  }
+  #signup-fab:active { transform: scale(.97); }
+</style>
+
+<a id="signup-fab" href="signup.html" aria-label="ثبت‌نام یا حساب کاربری">
+  حساب کاربری (اختیاری)
+</a>
+
+  <script src="app-nav.js"></script>
+
+<style>
+/* final hide for floating chat button */
+#chat-fab,
+#signup-fab {
+  display: none !important;
+}
+</style>
+
+</body>
+</html>
+<!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
+<style>
+    .options-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+    }
+    .options-row .field-group {
+        flex: 1;
+        min-width: 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .options-row label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+    .options-row select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(15,23,42,0.6);
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        font-family: Vazirmatn, Tahoma, sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+        -webkit-appearance: none;
+        appearance: none;
+        cursor: pointer;
+    }
+    .options-row select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(6,182,212,0.15);
+    }
+    .options-row select option {
+        background: #0f172a;
+        color: #e2e8f0;
+    }
+
+    .options-row input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(15,23,42,0.6);
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        font-family: Vazirmatn, Tahoma, sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+        direction: rtl;
+        box-sizing: border-box;
+    }
+    .options-row input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(6,182,212,0.15);
+    }
+    .options-row input::placeholder {
+        color: #64748b;
+        font-weight: 400;
+    }
+    .summary-note {
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(6,182,212,0.08);
+        border: 1px solid rgba(6,182,212,0.2);
+        color: #67e8f9;
+    }
+    .summary-note.warn {
+        background: rgba(245,158,11,0.08);
+        border-color: rgba(245,158,11,0.25);
+        color: #fbbf24;
+    }
+
+        /* Kuri On Custom Modern Overrides */
+        body {
+            background-size: cover;
+        }
+        .card {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+        select, button, input {
+            font-family: Vazirmatn, Tahoma, sans-serif !important;
+        }
+        /* Make dropdowns look modern and sleek */
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        select:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+        /* Fix table / result card clutter on mobile */
+        .result-item, table {
+            width: 100%;
+        }
+        .damage-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .damage-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .damage-row .label {
+            color: #94a3b8;
+        }
+        .damage-row .value {
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+    body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}</style>
+
+
+<script>
+// ===== ضرایب جدید =====
+const MARKET_MULTIPLIER = {
+    domestic: 1.0,
+    foreign: 1.8
+};
+
+const TIER_MULTIPLIER = {
+    standard: 1.0,
+    economic: 0.65,
+    luxury: 1.6
+};
+// ===== داده دسته و مدل خودرو =====
+const VEHICLE_GROUPS = {
+  iran_khodro: {
+    label: 'ایران‌خودرو',
+    multiplier: 1.00,
+    models: {
+      peykan: {label:'پیکان', multiplier:0.55},
+      samand: {label:'سمند', multiplier:0.75},
+      samand_soren: {label:'سمند سورن', multiplier:0.85},
+      dena: {label:'دنا', multiplier:1.00},
+      dena_plus: {label:'دنا پلاس', multiplier:1.10},
+      dena_plus_turbo: {label:'دنا پلاس توربو', multiplier:1.20},
+      peugeot_405: {label:'پژو ۴۰۵', multiplier:0.70},
+      peugeot_pars: {label:'پژو پارس', multiplier:0.85},
+      peugeot_206: {label:'پژو ۲۰۶', multiplier:0.80},
+      peugeot_207: {label:'پژو ۲۰۷', multiplier:1.00},
+      peugeot_207_panorama: {label:'پژو ۲۰۷ پانوراما', multiplier:1.10},
+      runna: {label:'رنو', multiplier:0.75},
+      runna_plus: {label:'رونـا پلاس', multiplier:0.90},
+      tara: {label:'تارا', multiplier:1.15},
+      tara_v1: {label:'تارا دستی', multiplier:1.10},
+      tara_v4: {label:'تارا اتوماتیک', multiplier:1.25},
+      arisun: {label:'آریسان', multiplier:0.65},
+      haima_s5: {label:'هایما S5', multiplier:1.25},
+      haima_s7: {label:'هایما S7', multiplier:1.40},
+      haima_8s: {label:'هایما 8S', multiplier:1.55}
+    }
+  },
+  saipa: {
+    label: 'سایپا',
+    multiplier: 0.90,
+    models: {
+      pride: {label:'پراید', multiplier:0.55},
+      pride_131: {label:'پراید ۱۳۱', multiplier:0.55},
+      pride_132: {label:'پراید ۱۳۲', multiplier:0.55},
+      pride_111: {label:'پراید ۱۱۱', multiplier:0.60},
+      tiba: {label:'تیبا', multiplier:0.65},
+      tiba2: {label:'تیبا ۲', multiplier:0.70},
+      saipa_s: {label:'سایپا S', multiplier:0.80},
+      quick: {label:'کوییک', multiplier:0.85},
+      quick_r: {label:'کوییک R', multiplier:0.90},
+      quick_at: {label:'کوییک اتوماتیک', multiplier:1.00},
+      shahین: {label:'شاهین', multiplier:1.00},
+      shahین_g: {label:'شاهین G', multiplier:1.10},
+      shahین_اتوماتیک: {label:'شاهین اتوماتیک', multiplier:1.20},
+      changan_cs35: {label:'چانگان CS35', multiplier:1.25},
+      zotye: {label:'زوتی آریو', multiplier:0.95}
+    }
+  },
+  montage: {
+    label: 'مونتاژی',
+    multiplier: 1.25,
+    models: {
+      fidelity: {label:'فیدلیتی', multiplier:1.10},
+      fidelity_prime: {label:'فیدلیتی پرایم', multiplier:1.20},
+      dignity: {label:'دیگنیتی', multiplier:1.05},
+      dignity_prime: {label:'دیگنیتی پرایم', multiplier:1.15},
+      tiggo5: {label:'چری تیگو ۵', multiplier:1.00},
+      tiggo7: {label:'چری تیگو ۷', multiplier:1.15},
+      tiggo8: {label:'چری تیگو ۸', multiplier:1.35},
+      arrizo5: {label:'آریزو ۵', multiplier:0.95},
+      arrizo6: {label:'آریزو ۶', multiplier:1.10},
+      kerman_jac_s3: {label:'جک S3', multiplier:0.95},
+      kerman_jac_s5: {label:'جک S5', multiplier:1.10},
+      lamari: {label:'لاماری ایما', multiplier:1.25},
+      kmc_j7: {label:'KMC J7', multiplier:1.20},
+      kmc_t8: {label:'KMC T8', multiplier:1.15},
+      haima_7x: {label:'هایما 7X', multiplier:1.35}
+    }
+  },
+  import: {
+    label: 'وارداتی',
+    multiplier: 1.60,
+    models: {
+      corolla: {label:'تویوتا کرولا', multiplier:1.20},
+      camry: {label:'تویوتا کمری', multiplier:1.30},
+      rav4: {label:'تویوتا RAV4', multiplier:1.35},
+      elantra: {label:'هیوندای النترا', multiplier:1.15},
+      sonata: {label:'هیوندای سوناتا', multiplier:1.25},
+      tucson: {label:'هیوندای توسان', multiplier:1.30},
+      santa_fe: {label:'هیوندای سانتافه', multiplier:1.40},
+      kia_cerato: {label:'کیا سراتو', multiplier:1.15},
+      kia_sportage: {label:'کیا اسپورتیج', multiplier:1.35},
+      mazda3: {label:'مزدا ۳', multiplier:1.15},
+      nissan_xtrail: {label:'نیسان ایکس‌تریل', multiplier:1.40}
+    }
+  }
+};
+
+function getVehicleSelection() {
+  const groupEl = document.getElementById('brandGroupSelect');
+  const modelEl = document.getElementById('vehicleModelSelect');
+  if (!groupEl || !modelEl) return null;
+  const groupKey = groupEl.value;
+  const modelKey = modelEl.value;
+  if (!groupKey || !modelKey) return null;
+  const group = VEHICLE_GROUPS[groupKey];
+  const model = group && group.models[modelKey];
+  if (!group || !model) return null;
+  return {
+    groupKey: groupKey,
+    modelKey: modelKey,
+    groupLabel: group.label,
+    modelLabel: model.label,
+    multiplier: group.multiplier * model.multiplier
+  };
+}
+
+function updateVehicleModels() {
+  const groupEl = document.getElementById('brandGroupSelect');
+  const modelEl = document.getElementById('vehicleModelSelect');
+  if (!groupEl || !modelEl) return;
+  const groupKey = groupEl.value;
+  modelEl.innerHTML = '';
+  if (!groupKey) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'ابتدا دسته خودرو را انتخاب کنید';
+    modelEl.appendChild(opt);
+    modelEl.disabled = true;
+  } else {
+    const group = VEHICLE_GROUPS[groupKey];
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'انتخاب کنید...';
+    modelEl.appendChild(placeholder);
+    for (const [key, model] of Object.entries(group.models)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = model.label;
+      modelEl.appendChild(opt);
+    }
+    modelEl.disabled = false;
+  }
+  window.updateAnalyzeButton();
+}
+
+function calculateRange(classId, areaFraction, multiplier) {
+  const rule = COST_RULES[classId];
+  const central = rule.base + rule.perArea * areaFraction;
+  const minCost = Math.round(central * 0.80 * multiplier / 10000) * 10000;
+  const maxCost = Math.round(central * 1.20 * multiplier / 10000) * 10000;
+  return { min: minCost, max: maxCost };
+}
+
+let isAnalyzing = false;
+
+window.updateAnalyzeButton = function () {
+  const modelReady = (typeof session !== 'undefined' && !!session);
+  const imageReady = (typeof currentImage !== 'undefined' && !!currentImage);
+  const vehicleReady =
+    (typeof getVehicleSelection === 'function' && !!getVehicleSelection());
+
+  if (typeof analyzeButton !== 'undefined' && analyzeButton) {
+    analyzeButton.disabled = isAnalyzing || !(modelReady && imageReady && vehicleReady);
+  }
+};
+
+// ===== اتصال رویدادهای انتخاب خودرو =====
+const brandGroupSelect = document.getElementById('brandGroupSelect');
+const vehicleModelSelect = document.getElementById('vehicleModelSelect');
+if (brandGroupSelect) brandGroupSelect.addEventListener('change', updateVehicleModels);
+if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', window.updateAnalyzeButton);
+if (brandGroupSelect) updateVehicleModels();
+
+function showResultsWithOptions(results) {
+    const vehicle = getVehicleSelection();
+    const counts = {};
+    const ranges = {};
+    let totalMin = 0;
+    let totalMax = 0;
+
+    for (const r of results) {
+        counts[r.classId] = (counts[r.classId] || 0) + 1;
+        const range = calculateRange(r.classId, r.areaFraction, vehicle ? vehicle.multiplier : 1);
+        if (!ranges[r.classId]) {
+            ranges[r.classId] = { min: 0, max: 0, scoreSum: 0 };
+        }
+        ranges[r.classId].min += range.min;
+        ranges[r.classId].max += range.max;
+        ranges[r.classId].scoreSum += r.score;
+        totalMin += range.min;
+        totalMax += range.max;
+    }
+
+    const summary = Object.keys(counts)
+        .map(k => CLASS_NAMES[k] + '=' + counts[k])
+        .join(' | ');
+    dbg('خودرو: ' + (vehicle ? vehicle.groupLabel + ' - ' + vehicle.modelLabel : 'نامشخص') + ' | توزیع: ' + (summary || 'هیچ'));
+
+    resultBody.innerHTML = '';
+    let hasAny = false;
+
+    for (let c = 0; c < NUM_CLASSES; c++) {
+        if (!counts[c]) continue;
+        hasAny = true;
+        const color = CLASS_COLORS[c];
+        const avgScore = Math.round(ranges[c].scoreSum / counts[c] * 100);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="dot" style="background: rgb(${color[0]},${color[1]},${color[2]})"></span> ${CLASS_NAMES[c]}</td>
+            <td style="text-align: center; font-weight: bold;">${counts[c]}</td>
+            <td style="text-align: center; font-weight: bold; color: #a78bfa;">${avgScore}٪</td>
+            <td style="text-align: left; font-weight: bold; color: #38bdf8;">${ranges[c].min.toLocaleString('fa-IR')} تا ${ranges[c].max.toLocaleString('fa-IR')}</td>
+        `;
+        resultBody.appendChild(tr);
+    }
+
+    if (!hasAny) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" style="text-align: center; color: var(--text-muted);">آسیبی با اطمینان کافی تشخیص داده نشد.</td>';
+        resultBody.appendChild(tr);
+    }
+
+    
+    totalCostEl.textContent = totalMin.toLocaleString('fa-IR') + ' تا ' + totalMax.toLocaleString('fa-IR') + ' تومان';
+
+    resultCard.classList.remove('hidden');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// ===== پچ کردن کلیک دکمه آنالیز =====
+const originalClickHandler = analyzeButton.click;
+analyzeButton.addEventListener('click', async function () {
+    if (isAnalyzing || !session || !currentImage) return;
+
+    isAnalyzing = true;
+    window.updateAnalyzeButton();
+    showLoading();
+    clearDbg();
+
+    try {
+        setStatus('آماده‌سازی عکس...');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        const meta0 = letterbox(currentImage, INPUT_SIZE);
+        const tensor = canvasToTensor(meta0.canvas);
+        const feeds = { [session.inputNames[0]]: tensor };
+
+        setStatus('تشخیص آسیب با هوش مصنوعی...');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const outputs = await session.run(feeds);
+
+        const names = Object.keys(outputs);
+        dbg('خروجی‌های مدل: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  '));
+
+        let out0 = null, out1 = null;
+        for (const nm of names) {
+            if (outputs[nm].dims.length === 3) out0 = outputs[nm];
+            if (outputs[nm].dims.length === 4) out1 = outputs[nm];
+        }
+
+        if (!out0) {
+            throw new Error('خروجی تشخیص (۳بعدی) پیدا نشد.');
+        }
+        if (!out1) {
+            throw new Error('خروجی پروتوتایپ ماسک (۴بعدی) پیدا نشد.');
+        }
+
+        const meta = {
+            scale: meta0.scale, dx: meta0.dx, dy: meta0.dy,
+            w: meta0.w, h: meta0.h,
+            origW: currentImage.naturalWidth,
+            origH: currentImage.naturalHeight
+        };
+
+        const results = analyzeOutput(out0, out1, meta);
+
+        setStatus('محاسبه هزینه و اعمال ضرایب خودرو...');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        drawResults(results, currentImage, meta);
+
+        setStatus('نمایش نتایج...');
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        showResultsWithOptions(results);
+
+        if (results.length === 0) {
+            setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + ').', 'error');
+        } else {
+            setStatus('تحلیل کامل شد — ' + results.length + ' آسیب شناسایی شد.', 'ok');
+        }
+    } catch (e) {
+        console.error(e);
+        setStatus('خطا در تحلیل: ' + e.message, 'error');
+    } finally {
+        isAnalyzing = false;
+        hideLoading();
+        window.updateAnalyzeButton();
+    }
+});
+
+async function copyReportToClipboard() {
+    const vehicle = getVehicleSelection();
+    let text = 'برآورد هزینه خسارت خودرو:\n';
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    
+    document.querySelectorAll('#resultBody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 4) {
+            text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد (اطمینان: ${cells[2].textContent.trim()}) - هزینه: ${cells[3].textContent.trim()}\n`;
+        }
+    });
+    
+    const total = document.getElementById('totalCost');
+    if (total) text += `\nهزینه کل: ${total.textContent.trim()}\n`;
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        setStatus('متن برآورد با موفقیت کپی شد!', 'ok');
+    } catch (e) {
+        setStatus('خطا در کپی: ' + e.message, 'error');
+    }
+}
+
+async function shareReport() {
+    const vehicle = getVehicleSelection();
+    let text = 'برآورد هزینه خسارت خودرو:\n';
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    
+    document.querySelectorAll('#resultBody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 4) {
+            text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد - هزینه: ${cells[3].textContent.trim()}\n`;
+        }
+    });
+    
+    const total = document.getElementById('totalCost');
+    if (total) text += `\nهزینه کل: ${total.textContent.trim()}`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: 'گزارش برآورد خسارت', text: text });
+            setStatus('گزارش به اشتراک گذاشته شد.', 'ok');
+        } catch (e) {}
+    } else {
+        copyReportToClipboard();
+    }
+}
+
+function resetApp() {
+    currentImage = null;
+    document.getElementById('uploadButton').value = '';
+    document.getElementById('analyzeButton').disabled = true;
+    document.getElementById('resultCard').classList.add('hidden');
+    document.getElementById('resultBody').innerHTML = '';
+    setStatus('آماده برای انتخاب تصویر جدید.', 'info');
+}
+
+</script>
+<script>
+  // مدل فقط پس از تعریف تمام توابع و رویدادهای رابط اجرا شود
+
+</script>
+</body>
+</html>
+
+<script>
+  loadModel();
+</script>
