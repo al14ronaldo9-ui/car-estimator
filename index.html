@@ -501,7 +501,100 @@
             font-weight: 700;
         }
 
-    body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}</style>
+    body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-height:1.5}.card{border:1px solid #30363d;box-shadow:0 4px 12px rgba(0,0,0,0.3)}.picker{border:1px solid #30363d;font-size:.95rem}.picker:focus-within{border-color:#58a6ff}button:disabled{opacity:0.55;cursor:not-allowed}#status{font-size:.95rem;line-height:1.6}table th,table td{border-color:#30363d;font-size:.95rem;line-height:1.6}.legend span{font-size:.9rem}body{background:#0b0f19!important;color:#f0f6fc!important}.card,#uploadCard,.upload-box,#dropZone{background:#161b22!important;border:1px solid #30363d!important;color:#f0f6fc!important}.drop-zone{background:#1c2128!important;border:2px dashed #388bfd!important;color:#f0f6fc!important}.drop-zone p,.sub,.upload-box p{color:#8b949e!important}select,input{background:#161b22!important;color:#f0f6fc!important;border:1px solid #30363d!important}button#analyzeButton:disabled{background:#21262d!important;color:#484f58!important;border:1px solid #30363d!important}#status{background:rgba(56,139,253,0.1)!important;color:#58a6ff!important;border:1px solid rgba(56,139,253,0.3)!important}
+/* ===== بهینه‌سازی نمایش نتایج ===== */
+#resultCard {
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+#resultCard h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#resultCard .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#resultCard table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border, #30363d);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+}
+
+#resultCard th {
+  background: rgba(56,139,253,0.14);
+  color: #58a6ff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#resultCard th,
+#resultCard td {
+  padding: 12px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#resultCard th:first-child,
+#resultCard td:first-child {
+  text-align: right;
+}
+
+#resultCard tbody tr {
+  transition: background .2s rgba(56,139,253,0.08 background: rgba(56,139,253,0.08);
+}
+
+#resultCard tbody tr + tr td {
+  border-top: 1px solid rgba(148,163,184,0.16);
+}
+
+#resultCard .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+#resultCard .total-row td {
+ ,: 15px 10px;
+  border-top: 2px solid rgba(56,139,253,0.45);
+  background: rgba(56,139,253,0.12);
+  color: #f0f6fc;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+#totalCost {
+  color: #3fb950;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  #resultCard th,
+  #resultCard td {
+    padding: 10px 7px;
+    font-size: .88rem;
+  }
+
+  #resultCard .total-row td {
+    font-size: .96rem;
+  }
+}
+
+</style>
 
 <style>
 /* ترفند قطعی برای مرتب‌سازی موبایل و تک‌ستونه کردن */
@@ -691,6 +784,23 @@ body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-heig
                 </tfoot>
             </table>
         </div>
+        <div id="reportActions" style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button type="button" onclick="copyReportToClipboard()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#21262d;border:1px solid #30363d;color:#f0f6fc;">
+                📋 کپی گزارش
+            </button>
+
+            <button type="button" onclick="shareReport()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#21262d;border:1px solid #30363d;color:#f0f6fc;">
+                🔗 اشتراک‌گذاری
+            </button>
+
+            <button type="button" onclick="resetApp()"
+                style="padding:10px 14px;font-size:.9rem;cursor:pointer;border-radius:8px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">
+                📷 عکس جدید
+            </button>
+        </div>
+
     </section>
 </main>
 <script>
@@ -1779,20 +1889,6 @@ function showResultsWithOptions(results) {
 
     
     totalCostEl.textContent = totalMin.toLocaleString('fa-IR') + ' تا ' + totalMax.toLocaleString('fa-IR') + ' تومان';
-
-    // دکمه‌های جدید اشتراک‌گذاری و پاکسازی
-    let actionDiv = document.getElementById('dynamicActionButtons');
-    if (!actionDiv) {
-        actionDiv = document.createElement('div');
-        actionDiv.id = 'dynamicActionButtons';
-        actionDiv.style.cssText = 'margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;';
-        actionDiv.innerHTML = `
-            <button class="btn btn-secondary" onclick="shareReport()" style="padding: 8px 12px; font-size: 14px;">اشتراک‌گذاری گزارش</button>
-            <button class="btn btn-secondary" onclick="copyReportToClipboard()" style="padding: 8px 12px; font-size: 14px;">کپی متن برآورد</button>
-            <button class="btn btn-danger" onclick="resetApp()" style="padding: 8px 12px; font-size: 14px;">عکس جدید</button>
-        `;
-        totalCostEl.parentNode.appendChild(actionDiv);
-    }
 
     resultCard.classList.remove('hidden');
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
