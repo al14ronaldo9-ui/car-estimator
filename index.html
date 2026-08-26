@@ -1525,6 +1525,237 @@ window.hideLoading = hideLoading;
 <script>
   // اجرای مدل پس از تعریف کامل توابع انتخاب خودرو
 </script>
+
+<!-- Global Chat -->
+<style id="global-chat-style">
+#chat-fab {
+  position: fixed !important;
+  left: 16px !important;
+  right: auto !important;
+  bottom: 18px !important;
+  width: 58px !important;
+  height: 58px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #ff4b2b, #ff416c) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.38) !important;
+  cursor: pointer;
+  z-index: 99999 !important;
+}
+#chat-fab:active { transform: scale(.92); }
+#chat-fab svg {
+  display: block !important;
+  width: 28px !important;
+  height: 28px !important;
+  fill: currentColor;
+}
+
+#chat-window {
+  position: fixed !important;
+  left: 16px !important;
+  bottom: 90px !important;
+  width: min(300px, calc(100vw - 32px)) !important;
+  height: 400px !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  border-radius: 15px !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55) !important;
+  z-index: 99999 !important;
+}
+#chat-window.active { display: flex !important; }
+.chat-header { padding: 15px; background: #252525; border-bottom: 1px solid #333; }
+.chat-header h3 { margin: 0; color: #fff; font-size: 14px; }
+
+#chat-messages {
+  display: flex !important;
+  flex: 1;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 10px;
+  overflow-y: auto;
+  color: #fff;
+}
+
+.msg { padding: 8px; margin: 5px 0; border-radius: 10px; font-size: 13px; }
+#chat-messages .msg.user {
+  background: #007bff !important;
+  color: #fff !important;
+  align-self: flex-end !important;
+  text-align: right !important;
+  max-width: 82% !important;
+}
+#chat-messages .msg.expert {
+  background: #333 !important;
+  color: #fff !important;
+  align-self: flex-start !important;
+  max-width: 82% !important;
+}
+
+.chat-input-area {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 64px !important;
+  padding: 10px !important;
+  background: #252525 !important;
+  border-top: 1px solid #444 !important;
+  box-sizing: border-box !important;
+}
+#chat-input {
+  display: block !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 0 12px !important;
+  margin: 0 !important;
+  background: #3a3a3a !important;
+  color: #fff !important;
+  border: 1px solid #666 !important;
+  border-radius: 9px !important;
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  text-align: right !important;
+  direction: rtl !important;
+  outline: none !important;
+}
+#chat-input::placeholder { color: #c7c7c7 !important; opacity: 1 !important; }
+#chat-send {
+  display: flex !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ff4b2b !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  font-size: 20px !important;
+}
+</style>
+
+<button id="chat-fab" type="button" aria-label="باز کردن گفتگو با کارشناس">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+  </svg>
+</button>
+
+<div id="chat-window">
+  <div class="chat-header"><h3>پشتیبانی آنلاین</h3></div>
+  <div id="chat-messages">
+    <div class="msg expert">سلام! چطور می‌توانم کمک کنم؟</div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chat-input" placeholder="پیام...">
+    <button id="chat-send" type="button">➤</button>
+  </div>
+</div>
+
+<script id="supabase-chat-script">
+(function () {
+  const SUPABASE_URL = 'https://zpobmwhvhqjcqmaoqtxq.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ruoLdqEOaFEuQjPt5e0Huw_KwKAOp4T';
+  const API_URL = SUPABASE_URL + '/rest/v1/messages';
+
+  const fab = document.getElementById('chat-fab');
+  const chatWindow = document.getElementById('chat-window');
+  const input = document.getElementById('chat-input');
+  const sendButton = document.getElementById('chat-send');
+  const messages = document.getElementById('chat-messages');
+
+  if (!fab || !chatWindow || !input || !sendButton || !messages) return;
+
+  function addMessage(text, type) {
+    const message = document.createElement('div');
+    message.className = 'msg ' + type;
+    message.textContent = text;
+    messages.appendChild(message);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function renderMessages(data) {
+    messages.innerHTML = '';
+    if (!data || data.length === 0) {
+      addMessage('سلام! چطور می‌توانم کمک کنم؟', 'expert');
+      return;
+    }
+    data.forEach(function (item) {
+      addMessage(item.text, item.sender === 'expert' ? 'expert' : 'user');
+    });
+  }
+
+  async function loadMessages() {
+    try {
+      const response = await fetch(
+        API_URL + '?select=id,text,sender,created_at&order=created_at.asc',
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+      );
+      if (!response.ok) throw new Error('خطا در دریافت پیام‌ها');
+      renderMessages(await response.json());
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function sendMessage(event) {
+    if (event) event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    sendButton.disabled = true;
+    input.value = '';
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ text: text, sender: 'user' })
+      });
+
+      if (!response.ok) throw new Error('خطا در ارسال پیام');
+      await loadMessages();
+    } catch (error) {
+      console.error(error);
+      addMessage('ارسال پیام ناموفق بود. اتصال اینترنت را بررسی کنید.', 'expert');
+      input.value = text;
+    } finally {
+      sendButton.disabled = false;
+      input.focus();
+    }
+  }
+
+  fab.onclick = function () {
+    chatWindow.classList.toggle('active');
+    if (chatWindow.classList.contains('active')) loadMessages();
+  };
+
+  sendButton.onclick = sendMessage;
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') sendMessage(event);
+  });
+
+  setInterval(function () {
+    if (chatWindow.classList.contains('active')) loadMessages();
+  }, 5000);
+})();
+</script>
+
 </body>
 </html>
 <!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
