@@ -808,9 +808,9 @@ const CLASS_NAMES = [
   "فرورفتگی بدنه",
   "خط و خش عمیق",
   "ترک‌خوردگی",
-  "پارگی یا سوراخ",
+  "شیشه شکسته",
   "شکستگی چراغ",
-  "آسیب به شیشه"
+  "لاستیک پنچر"
 ];
 
 const CLASS_COLORS = [
@@ -1118,13 +1118,22 @@ function drawResults(results, img, meta) {
     const imgData = mctx.createImageData(160, 160);
     const data = imgData.data;
 
-    for (let i = 0; i < 160 * 160; i++) {
-      if (r.mask160[i]) {
-        const idx = i * 4;
-        data[idx] = cr;
-        data[idx + 1] = cg;
-        data[idx + 2] = cb;
-        data[idx + 3] = 100;
+    // ماسک فقط در محدودهٔ Bounding Box همان تشخیص نمایش داده می‌شود.
+    const mx0 = Math.max(0, Math.floor(r.box640.x1 * MASK_SCALE));
+    const my0 = Math.max(0, Math.floor(r.box640.y1 * MASK_SCALE));
+    const mx1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.x2 * MASK_SCALE));
+    const my1 = Math.min(PROTO_SIZE, Math.ceil(r.box640.y2 * MASK_SCALE));
+
+    for (let y = my0; y < my1; y++) {
+      for (let x = mx0; x < mx1; x++) {
+        const i = y * PROTO_SIZE + x;
+        if (r.mask160[i]) {
+          const idx = i * 4;
+          data[idx] = cr;
+          data[idx + 1] = cg;
+          data[idx + 2] = cb;
+          data[idx + 3] = 100;
+        }
       }
     }
     mctx.putImageData(imgData, 0, 0);
@@ -1340,7 +1349,7 @@ analyzeButton.addEventListener('click', async function () {
     const results = analyzeOutput(out0, out1, meta);
 
     drawResults(results, currentImage, meta);
-    showResults(results);
+    // رندر قدیمی غیرفعال شد؛ گزارش از مسیر showResultsWithOptions نمایش داده می‌شود
 
     if (results.length === 0) {
       setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + '). جزئیات فنی در باکس دیباگ.', 'error');
@@ -1895,7 +1904,6 @@ function showResultsWithOptions(results) {
 }
 // ===== پچ کردن کلیک دکمه آنالیز =====
 const originalClickHandler = analyzeButton.click;
-analyzeButton.removeEventListener('click', analyzeButton.click);
 analyzeButton.addEventListener('click', async function () {
     if (isAnalyzing || !session || !currentImage) return;
 

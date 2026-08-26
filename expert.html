@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پنل کارشناس</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #111; color: #fff; font-family: Tahoma, Arial, sans-serif; }
+    .header { position: sticky; top: 0; padding: 16px; background: #1d1d1d; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+    #messages { max-width: 720px; margin: auto; padding: 16px 12px 90px; display: flex; flex-direction: column; gap: 10px; }
+    .message { max-width: 85%; padding: 11px 12px; border-radius: 12px; }
+    .message.user { align-self: flex-end; background: #1769c2; }
+    .message.expert { align-self: flex-start; background: #303030; }
+    .composer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding: 12px; background: #1d1d1d; border-top: 1px solid #333; }
+    #reply { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid #444; background: #292929; color: #fff; }
+    #send { margin-left: 8px; padding: 0 18px; background: #ff4b2b; border: none; color: #fff; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>پنل کارشناس</span>
+    <span id="status">در حال اتصال...</span>
+  </div>
+  <div id="messages"></div>
+  <form class="composer" id="reply-form">
+    <input id="reply" type="text" placeholder="پاسخ...">
+    <button id="send" type="submit">ارسال</button>
+  </form>
+
+  <script>
+    const SUPABASE_URL = 'https://zpobmwhvhqjcqmaoqtxq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_ruoLdqEOaFEuQjPt5e0Huw_KwKAOp4T';
+    const API_URL = SUPABASE_URL + '/rest/v1/messages';
+
+    async function loadMessages() {
+      try {
+        const res = await fetch(`${API_URL}?select=*&order=created_at.asc`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+        });
+        const data = await res.json();
+        const box = document.getElementById('messages');
+        box.innerHTML = '';
+        data.forEach(m => {
+          const div = document.createElement('div');
+          div.className = 'message ' + (m.sender === 'expert' ? 'expert' : 'user');
+          div.textContent = m.text;
+          box.appendChild(div);
+        });
+        document.getElementById('status').textContent = 'متصل ●';
+        document.getElementById('status').style.color = '#67d67c';
+      } catch (e) { document.getElementById('status').textContent = 'خطا'; }
+    }
+
+    document.getElementById('reply-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('reply');
+      const text = input.value.trim();
+      if (!text) return;
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: 'expert', text: text })
+      });
+      input.value = '';
+      loadMessages();
+    };
+
+    setInterval(loadMessages, 3000);
+    loadMessages();
+  </script>
+</body>
+</html>
