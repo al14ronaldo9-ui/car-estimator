@@ -729,6 +729,12 @@ const totalCostEl = $('totalCost');
 const legendEl = $('legend');
 const debugEl = $('debugInfo');
 
+/* EARLIEST_UPDATE_ANALYZE_BUTTON_FALLBACK */
+window.updateAnalyzeButton = function () {
+  // تا تعریف کامل تابع در اسکریپت‌های بعدی، فقط از توقف برنامه جلوگیری می‌کند.
+};
+
+
 function dbg(msg) {
   console.log('[debug]', msg);
 }
@@ -1154,7 +1160,7 @@ img.decoding = 'async';
     overlay.style.display = 'none';
     resultCard.classList.add('hidden');
     clearDbg();
-    updateAnalyzeButton();
+    window.updateAnalyzeButton();
     setStatus(session ? 'تصویر آماده است. روی «شروع آنالیز تصویر» بزنید.' : 'مدل هنوز بارگذاری نشده است...', session ? 'ok' : 'error');
   };
   img.onerror = function () {
@@ -1216,7 +1222,7 @@ analyzeButton.addEventListener('click', async function () {
     console.error(e);
     setStatus('خطا در تحلیل: ' + e.message, 'error');
   } finally {
-    updateAnalyzeButton();
+    window.updateAnalyzeButton();
   }
 });
 
@@ -1286,7 +1292,7 @@ async function fetchModelWithProgress(url) {
 async function loadModel() {
   try {
     ort.env.wasm.numThreads = 1;
-    ort.env.wasm.simd = true;
+    ort.env.wasm.simd = false;
 
     const modelUrl = new URL('static/best.onnx', window.location.href).href;
     const modelBuffer = await fetchModelWithProgress(modelUrl);
@@ -1296,9 +1302,9 @@ async function loadModel() {
       executionProviders: ['wasm']
     });
     dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
-    updateAnalyzeButton();
+    window.updateAnalyzeButton();
     setStatus('مدل آماده به کار است.', 'ok');
-    if (currentImage) updateAnalyzeButton();
+    if (currentImage) window.updateAnalyzeButton();
   } catch (e) {
     console.error(e);
     setStatus('خطا در لود مدل: ' + e.message, 'error');
@@ -1306,7 +1312,6 @@ async function loadModel() {
 }
 
 buildLegend();
-loadModel();
 </script>
 
 <script id="analysis-button-animation-script">
@@ -1379,6 +1384,9 @@ window.showLoading = showLoading;
 window.hideLoading = hideLoading;
 </script>
 
+<script>
+  // اجرای مدل پس از تعریف کامل توابع انتخاب خودرو
+</script>
 </body>
 </html>
 <!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
@@ -1687,7 +1695,7 @@ function updateVehicleModels() {
     }
     modelEl.disabled = false;
   }
-  updateAnalyzeButton();
+  window.updateAnalyzeButton();
 }
 
 function calculateRange(classId, areaFraction, multiplier) {
@@ -1698,14 +1706,22 @@ function calculateRange(classId, areaFraction, multiplier) {
   return { min: minCost, max: maxCost };
 }
 
-function updateAnalyzeButton() {
-  analyzeButton.disabled = !(session && currentImage && !!getVehicleSelection());
+window.updateAnalyzeButton = function () {
+  const modelReady = (typeof session !== 'undefined' && !!session);
+  const imageReady = (typeof currentImage !== 'undefined' && !!currentImage);
+  const vehicleReady =
+    (typeof getVehicleSelection === 'function' && !!getVehicleSelection());
+
+  if (typeof analyzeButton !== 'undefined' && analyzeButton) {
+    analyzeButton.disabled = !(modelReady && imageReady && vehicleReady);
+  }
+};
 
 // ===== اتصال رویدادهای انتخاب خودرو =====
 const brandGroupSelect = document.getElementById('brandGroupSelect');
 const vehicleModelSelect = document.getElementById('vehicleModelSelect');
 if (brandGroupSelect) brandGroupSelect.addEventListener('change', updateVehicleModels);
-if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', updateAnalyzeButton);
+if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', window.updateAnalyzeButton);
 if (brandGroupSelect) updateVehicleModels();
 
 function showResultsWithOptions(results) {
@@ -1760,8 +1776,6 @@ function showResultsWithOptions(results) {
     
     totalCostEl.textContent = totalMin.toLocaleString('fa-IR') + ' تا ' + totalMax.toLocaleString('fa-IR') + ' تومان';
 
-    }
-    
     // دکمه‌های جدید اشتراک‌گذاری و پاکسازی
     let actionDiv = document.getElementById('dynamicActionButtons');
     if (!actionDiv) {
@@ -1831,7 +1845,7 @@ analyzeButton.addEventListener('click', async function () {
         setStatus('خطا در تحلیل: ' + e.message, 'error');
     } finally {
         hideLoading();
-        updateAnalyzeButton();
+        window.updateAnalyzeButton();
     }
 });
 
@@ -1893,5 +1907,13 @@ function resetApp() {
 }
 
 </script>
+<script>
+  // مدل فقط پس از تعریف تمام توابع و رویدادهای رابط اجرا شود
+
+</script>
 </body>
 </html>
+
+<script>
+  loadModel();
+</script>
