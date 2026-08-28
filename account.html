@@ -275,9 +275,26 @@ main{width:100%!important}
       <textarea id="bio" maxlength="160"
                 placeholder="کمی درباره خودت بنویس..."></textarea>
 
-      <label for="avatar-url">لینک عکس پروفایل</label>
-      <input id="avatar-url" type="url"
-             placeholder="https://example.com/avatar.jpg">
+      <label>عکس پروفایل</label>
+
+      <div id="avatar-preview-wrap" style="display:flex;align-items:center;gap:12px;margin:10px 0 14px">
+        <img id="avatar-preview"
+             src=""
+             alt="عکس پروفایل"
+             style="width:64px;height:64px;border-radius:50%;object-fit:cover;display:none;border:2px solid rgba(56,189,248,.35)">
+        <span id="avatar-preview-text" style="font-size:11px;color:#8490a3">
+          هنوز عکسی انتخاب نشده
+        </span>
+      </div>
+
+      <input id="avatar-file"
+             type="file"
+             accept="image/jpeg,image/png,image/webp"
+             style="width:100%;margin-bottom:12px">
+
+      <input id="avatar-url"
+             type="hidden"
+             value="">
 
       <button id="save-profile" type="button">ذخیره پروفایل</button>
       <div id="profile-status"></div>
