@@ -497,7 +497,8 @@ main{width:100%!important}
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AVATAR UPLOAD ERROR:', errorText);
+      console.error('AVATAR UPLOAD ERROR:', response.status, errorText);
+      showStatus('خطای آپلود: ' + errorText, false);
       throw new Error('آپلود عکس ناموفق بود.');
     }
 
