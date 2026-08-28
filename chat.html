@@ -5902,8 +5902,9 @@ body.forum-ai-open #chat-send:active{
       );
 
       if (!response.ok) {
-        console.error('SEND ERROR:', await response.text());
-        alert('ارسال پیام ناموفق بود.');
+        const errText = await response.text();
+        console.error('SEND ERROR:', errText);
+        alert('خطای Supabase:\n' + errText);
         return;
       }
 
