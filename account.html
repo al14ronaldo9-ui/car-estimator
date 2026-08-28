@@ -391,14 +391,37 @@ main{width:100%!important}
   const username = document.getElementById('username');
   const bio = document.getElementById('bio');
   const avatarUrl = document.getElementById('avatar-url');
+  const avatarFile = document.getElementById('avatar-file');
+  const avatarPreview = document.getElementById('avatar-preview');
+  const avatarPreviewText = document.getElementById('avatar-preview-text');
   const saveButton = document.getElementById('save-profile');
   const status = document.getElementById('profile-status');
 
-  if (!username || !bio || !avatarUrl || !saveButton) return;
+  if (!username || !bio || !avatarUrl || !avatarFile || !saveButton) return;
+
+  const authHeaders = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + session.access_token
+  };
 
   function showStatus(text, ok) {
+    if (!status) return;
     status.textContent = text;
     status.style.color = ok ? '#70e0a0' : '#ffb4a6';
+  }
+
+  function showAvatar(url) {
+    if (!avatarPreview || !avatarPreviewText) return;
+
+    if (url) {
+      avatarPreview.src = url;
+      avatarPreview.style.display = 'block';
+      avatarPreviewText.textContent = 'عکس پروفایل انتخاب شده';
+    } else {
+      avatarPreview.src = '';
+      avatarPreview.style.display = 'none';
+      avatarPreviewText.textContent = 'هنوز عکسی انتخاب نشده';
+    }
   }
 
   async function loadProfile() {
@@ -408,12 +431,7 @@ main{width:100%!important}
         '/rest/v1/profiles?id=eq.' +
         encodeURIComponent(userId) +
         '&select=username,bio,avatar_url',
-        {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + session.access_token
-          }
-        }
+        { headers: authHeaders }
       );
 
       if (!response.ok) {
@@ -426,6 +444,7 @@ main{width:100%!important}
         username.value = data[0].username || '';
         bio.value = data[0].bio || '';
         avatarUrl.value = data[0].avatar_url || '';
+        showAvatar(data[0].avatar_url || '');
       }
     } catch (error) {
       console.error(error);
@@ -433,10 +452,64 @@ main{width:100%!important}
     }
   }
 
+  avatarFile.addEventListener('change', function () {
+    const file = avatarFile.files && avatarFile.files[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showStatus('فقط JPG، PNG یا WebP مجاز است.', false);
+      avatarFile.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showStatus('حجم عکس باید کمتر از ۵ مگابایت باشد.', false);
+      avatarFile.value = '';
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    showAvatar(previewUrl);
+    showStatus('عکس انتخاب شد؛ برای آپلود روی ذخیره پروفایل بزن.', true);
+  });
+
+  async function uploadAvatar(file) {
+    const extension =
+      file.type === 'image/png' ? 'png' :
+      file.type === 'image/webp' ? 'webp' : 'jpg';
+
+    const filePath = userId + '/avatar.' + extension;
+
+    const response = await fetch(
+      SUPABASE_URL +
+      '/storage/v1/object/avatars/' +
+      encodeURIComponent(filePath),
+      {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AVATAR UPLOAD ERROR:', errorText);
+      throw new Error('آپلود عکس ناموفق بود.');
+    }
+
+    return SUPABASE_URL +
+      '/storage/v1/object/public/avatars/' +
+      filePath +
+      '?v=' + Date.now();
+  }
+
   async function saveProfile() {
     const name = username.value.trim();
     const biography = bio.value.trim();
-    const avatar = avatarUrl.value.trim();
 
     if (!name) {
       showStatus('نام کاربری را وارد کن.', false);
@@ -449,16 +522,27 @@ main{width:100%!important}
     }
 
     saveButton.disabled = true;
-    showStatus('در حال ذخیره...', true);
 
     try {
+      let avatar = avatarUrl.value.trim();
+
+      const file =
+        avatarFile.files && avatarFile.files[0];
+
+      if (file) {
+        showStatus('در حال آپلود عکس...', true);
+        avatar = await uploadAvatar(file);
+        avatarUrl.value = avatar;
+      }
+
+      showStatus('در حال ذخیره پروفایل...', true);
+
       const response = await fetch(
         SUPABASE_URL + '/rest/v1/profiles?on_conflict=id',
         {
           method: 'POST',
           headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + session.access_token,
+            ...authHeaders,
             'Content-Type': 'application/json',
             'Prefer': 'resolution=merge-duplicates,return=representation'
           },
@@ -483,16 +567,22 @@ main{width:100%!important}
         );
       }
 
-      showStatus('پروفایل با موفقیت ذخیره شد ✓', true);
+      showAvatar(avatar);
+      showStatus('پروفایل و عکس با موفقیت ذخیره شد ✓', true);
+
     } catch (error) {
       console.error(error);
-      showStatus(error.message || 'خطا در ذخیره پروفایل.', false);
+      showStatus(
+        error.message || 'خطا در ذخیره پروفایل.',
+        false
+      );
     } finally {
       saveButton.disabled = false;
     }
   }
 
   saveButton.addEventListener('click', saveProfile);
+
   loadProfile();
 })();
 </script>
