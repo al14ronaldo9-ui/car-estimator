@@ -588,6 +588,95 @@ main{width:100%!important}
 })();
 </script>
 
+
+<style id="account-auth-ui">
+  #signup-form,
+  body > h1,
+  .signup-title {
+    display: none !important;
+  }
+
+  #account-auth-box {
+    margin: 0 0 18px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+
+  #account-auth-box .auth-email {
+    color: #9aa7b7;
+    font-size: 12px;
+    margin-top: 5px;
+    direction: ltr;
+    text-align: right;
+  }
+
+  #account-logout {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255,90,90,.12);
+    color: #ff8f8f;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  #account-logout:active {
+    transform: scale(.98);
+  }
+</style>
+
+<script id="account-auth-ui-script">
+(function () {
+  try {
+    const raw = localStorage.getItem('supabase_session');
+    if (!raw) return;
+
+    const session = JSON.parse(raw);
+    if (!session || !session.user || !session.access_token) return;
+
+    const form = document.getElementById('signup-form');
+    if (form) {
+      form.style.display = 'none';
+    }
+
+    const title = document.querySelector('h1');
+    if (title && title.textContent.includes('ثبت‌نام')) {
+      title.textContent = 'حساب کاربری';
+    }
+
+    const profileSection = document.getElementById('profile-section');
+
+    if (profileSection && !document.getElementById('account-auth-box')) {
+      const box = document.createElement('div');
+      box.id = 'account-auth-box';
+
+      const email = session.user.email || 'کاربر';
+
+      box.innerHTML = `
+        <div style="font-weight:800;font-size:17px">حساب شما</div>
+        <div class="auth-email">${email}</div>
+        <button id="account-logout" type="button">خروج از حساب</button>
+      `;
+
+      profileSection.parentNode.insertBefore(box, profileSection);
+
+      document.getElementById('account-logout').addEventListener('click', function () {
+        localStorage.removeItem('supabase_session');
+        window.location.href = 'login.html';
+      });
+    }
+
+  } catch (e) {
+    console.error('ACCOUNT AUTH UI ERROR:', e);
+  }
+})();
+</script>
+
 <script id="supabase-session">
 (() => {
   const raw = localStorage.getItem('supabase_session');
