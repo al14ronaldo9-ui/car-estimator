@@ -632,47 +632,69 @@ main{width:100%!important}
 
 <script id="account-auth-ui-script">
 (function () {
-  try {
-    const raw = localStorage.getItem('supabase_session');
-    if (!raw) return;
+  function initAccountAuthUI() {
+    try {
+      const raw = localStorage.getItem('supabase_session');
+      if (!raw) return;
 
-    const session = JSON.parse(raw);
-    if (!session || !session.user || !session.access_token) return;
+      const session = JSON.parse(raw);
 
-    const form = document.getElementById('signup-form');
-    if (form) {
-      form.style.display = 'none';
+      if (!session || !session.user || !session.access_token) return;
+
+      const form = document.getElementById('signup-form');
+      const title = document.querySelector('h1');
+      const profileSection = document.getElementById('profile-section');
+
+      if (form) {
+        form.style.display = 'none';
+      }
+
+      if (title && title.textContent.includes('ثبت‌نام')) {
+        title.textContent = 'حساب کاربری';
+      }
+
+      if (!profileSection) {
+        console.warn('profile-section هنوز آماده نیست');
+        return;
+      }
+
+      let box = document.getElementById('account-auth-box');
+
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'account-auth-box';
+
+        const email = session.user.email || 'کاربر';
+
+        box.innerHTML = `
+          <div style="font-weight:800;font-size:17px">حساب شما</div>
+          <div class="auth-email">${email}</div>
+          <button id="account-logout" type="button">خروج از حساب</button>
+        `;
+
+        profileSection.parentNode.insertBefore(box, profileSection);
+      }
+
+      const logout = document.getElementById('account-logout');
+
+      if (logout && !logout.dataset.bound) {
+        logout.dataset.bound = '1';
+
+        logout.addEventListener('click', function () {
+          localStorage.removeItem('supabase_session');
+          window.location.href = 'login.html';
+        });
+      }
+
+    } catch (e) {
+      console.error('ACCOUNT AUTH UI ERROR:', e);
     }
+  }
 
-    const title = document.querySelector('h1');
-    if (title && title.textContent.includes('ثبت‌نام')) {
-      title.textContent = 'حساب کاربری';
-    }
-
-    const profileSection = document.getElementById('profile-section');
-
-    if (profileSection && !document.getElementById('account-auth-box')) {
-      const box = document.createElement('div');
-      box.id = 'account-auth-box';
-
-      const email = session.user.email || 'کاربر';
-
-      box.innerHTML = `
-        <div style="font-weight:800;font-size:17px">حساب شما</div>
-        <div class="auth-email">${email}</div>
-        <button id="account-logout" type="button">خروج از حساب</button>
-      `;
-
-      profileSection.parentNode.insertBefore(box, profileSection);
-
-      document.getElementById('account-logout').addEventListener('click', function () {
-        localStorage.removeItem('supabase_session');
-        window.location.href = 'login.html';
-      });
-    }
-
-  } catch (e) {
-    console.error('ACCOUNT AUTH UI ERROR:', e);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAccountAuthUI);
+  } else {
+    initAccountAuthUI();
   }
 })();
 </script>

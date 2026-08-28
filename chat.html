@@ -6202,63 +6202,107 @@ body.forum-ai-open #chat-send:active{
   box-sizing:border-box!important;
 }
 
-/* خود حباب پیام */
+/* ===== PUBLIC CHAT FINAL UI ===== */
+
 #public-chat-page .public-message{
   display:block!important;
   width:fit-content!important;
   max-width:82%!important;
-  min-width:80px!important;
+  min-width:90px!important;
   box-sizing:border-box!important;
-  padding:9px 11px!important;
+  padding:10px 12px!important;
   margin:0!important;
   align-self:flex-start!important;
   direction:rtl!important;
+
+  background:linear-gradient(
+    145deg,
+    rgba(22,34,52,.98),
+    rgba(11,19,31,.98)
+  )!important;
+
+  border:1px solid rgba(148,163,184,.16)!important;
   border-radius:15px 15px 15px 5px!important;
+
+  box-shadow:0 5px 18px rgba(0,0,0,.18)!important;
 }
 
-/* پیام خود کاربر */
 #public-chat-page .public-message.mine{
   align-self:flex-end!important;
   margin-right:0!important;
   margin-left:0!important;
+
+  background:linear-gradient(
+    145deg,
+    rgba(8,91,112,.98),
+    rgba(24,55,105,.98)
+  )!important;
+
+  border:1px solid rgba(56,189,248,.22)!important;
   border-radius:15px 15px 5px 15px!important;
 }
 
-/* سربرگ داخل پیام */
+/* عکس + نام */
 #public-chat-page .public-message-user{
   display:flex!important;
+  flex-direction:row!important;
   align-items:center!important;
+  justify-content:flex-start!important;
   gap:7px!important;
-  min-height:26px!important;
-  margin-bottom:4px!important;
+
+  width:100%!important;
+  min-height:28px!important;
+  margin:0 0 5px!important;
+  padding:0!important;
+
+  direction:ltr!important;
 }
 
-/* آواتار */
+/* عکس */
 #public-chat-page .public-message-avatar{
   display:block!important;
-  flex:0 0 26px!important;
-  width:26px!important;
-  height:26px!important;
-  min-width:26px!important;
-  min-height:26px!important;
+  flex:0 0 28px!important;
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  min-height:28px!important;
+  max-width:28px!important;
+  max-height:28px!important;
+
   object-fit:cover!important;
   border-radius:50%!important;
-  background:linear-gradient(135deg,#06b6d4,#2563eb)!important;
-  border:1px solid rgba(255,255,255,.15)!important;
+
+  background:linear-gradient(
+    135deg,
+    #06b6d4,
+    #2563eb
+  )!important;
+
+  border:1px solid rgba(255,255,255,.18)!important;
 }
 
-/* وقتی کاربر عکس ندارد، JS تصویر را مخفی می‌کند؛
-   به‌جای آن فضای آواتار را با یک آیکون پر می‌کنیم */
-#public-chat-page .public-message-user:has(.public-message-avatar[style*="display: none"])::before{
+/* کاربر بدون عکس */
+#public-chat-page .public-message-user:has(
+  .public-message-avatar[style*="display: none"]
+)::before{
   content:"♙"!important;
+
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  flex:0 0 26px!important;
-  width:26px!important;
-  height:26px!important;
+
+  flex:0 0 28px!important;
+  width:28px!important;
+  height:28px!important;
+
   border-radius:50%!important;
-  background:linear-gradient(135deg,#06b6d4,#2563eb)!important;
+
+  background:linear-gradient(
+    135deg,
+    #06b6d4,
+    #2563eb
+  )!important;
+
   color:#fff!important;
   font-size:14px!important;
   font-weight:900!important;
@@ -6268,53 +6312,74 @@ body.forum-ai-open #chat-send:active{
 /* نام */
 #public-chat-page .public-message-name{
   display:block!important;
+  flex:0 1 auto!important;
+
   margin:0!important;
   padding:0!important;
+
   color:#67e8f9!important;
   font-size:10px!important;
   line-height:1.4!important;
   font-weight:900!important;
+
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
 }
 
 /* متن */
 #public-chat-page .public-message-text{
   display:block!important;
+
   margin:0!important;
   padding:0!important;
+
   color:#e2e8f0!important;
+
   font-size:12px!important;
-  line-height:1.75!important;
+  line-height:1.8!important;
+
   word-break:break-word!important;
+  overflow-wrap:anywhere!important;
   white-space:pre-wrap!important;
 }
 
 /* زمان */
 #public-chat-page .public-message-time{
   display:block!important;
-  margin:4px 0 0!important;
+
+  margin:5px 0 0!important;
   padding:0!important;
-  color:#64748b!important;
-  font-size:7px!important;
+
+  color:#718096!important;
+  font-size:8px!important;
   line-height:1!important;
 }
 
-/* پیام خوش‌آمد */
+/* خوش آمد */
 #public-chat-page .public-welcome{
   align-self:center!important;
   margin:8px auto 14px!important;
 }
 
-/* ورودی */
+/* ناحیه ارسال */
 #public-chat-page .public-chat-input-area{
   position:sticky!important;
   bottom:0!important;
   z-index:20!important;
+
   display:flex!important;
   align-items:center!important;
+
   gap:8px!important;
   width:100%!important;
+
   box-sizing:border-box!important;
-  padding:9px 10px calc(9px + env(safe-area-inset-bottom))!important;
+
+  padding:
+    9px 10px
+    calc(9px + env(safe-area-inset-bottom))
+    !important;
 }
 
 /* فیلد */
@@ -6323,21 +6388,25 @@ body.forum-ai-open #chat-send:active{
   width:auto!important;
   min-width:0!important;
   height:44px!important;
+
   box-sizing:border-box!important;
 }
 
-/* دکمه ارسال */
+/* ارسال */
 #public-chat-page #public-chat-send{
   flex:0 0 40px!important;
   width:40px!important;
   min-width:40px!important;
   max-width:40px!important;
+
   height:40px!important;
   min-height:40px!important;
   max-height:40px!important;
+
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
+
   padding:0!important;
 }
 
