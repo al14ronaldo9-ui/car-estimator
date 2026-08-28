@@ -5731,6 +5731,76 @@ body.forum-ai-open #chat-send:active{
     return;
   }
 
+  async function refreshSessionIfNeeded() {
+    if (!session.refresh_token) {
+      console.warn('No refresh_token found in session');
+      return;
+    }
+
+    let shouldRefresh = false;
+
+    try {
+      const parts = session.access_token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          decodeURIComponent(
+            atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
+              .split('')
+              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          )
+        );
+
+        // Refresh when token has less than 60 seconds left
+        shouldRefresh = !payload.exp || (payload.exp * 1000 - Date.now() < 60000);
+      } else {
+        shouldRefresh = true;
+      }
+    } catch (e) {
+      shouldRefresh = true;
+    }
+
+    if (!shouldRefresh) return;
+
+    console.log('Refreshing Supabase session...');
+
+    const response = await fetch(
+      SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token',
+      {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          refresh_token: session.refresh_token
+        })
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.access_token) {
+      console.error('SESSION REFRESH ERROR:', result);
+      throw new Error('نشست ورود منقضی شده است؛ دوباره وارد حساب شوید.');
+    }
+
+    session = {
+      ...session,
+      ...result,
+      user: result.user || session.user
+    };
+
+    localStorage.setItem(
+      'supabase_session',
+      JSON.stringify(session)
+    );
+
+    console.log('Supabase session refreshed successfully');
+  }
+
+  await refreshSessionIfNeeded();
+
   const userId = session.user.id;
   const token = session.access_token;
 
