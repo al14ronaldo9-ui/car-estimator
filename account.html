@@ -259,6 +259,30 @@ main{width:100%!important}
       <button id="signup-btn" type="submit">ساخت حساب</button>
       <div id="status"></div>
     </form>
+
+    
+    <hr style="border:0;border-top:1px solid rgba(148,163,184,.14);margin:24px 0">
+
+    <section id="profile-section">
+      <h2 style="margin:0 0 8px;font-size:19px">👤 پروفایل عمومی</h2>
+      <p class="hint">این اطلاعات در گفتگوی عمومی برای سایر کاربران نمایش داده می‌شود.</p>
+
+      <label for="username">نام کاربری</label>
+      <input id="username" type="text" maxlength="30"
+             placeholder="مثلاً Ali_R">
+      
+      <label for="bio">بیوگرافی</label>
+      <textarea id="bio" maxlength="160"
+                placeholder="کمی درباره خودت بنویس..."></textarea>
+
+      <label for="avatar-url">لینک عکس پروفایل</label>
+      <input id="avatar-url" type="url"
+             placeholder="https://example.com/avatar.jpg">
+
+      <button id="save-profile" type="button">ذخیره پروفایل</button>
+      <div id="profile-status"></div>
+    </section>
+
   </main>
 
   <script>
@@ -327,6 +351,135 @@ main{width:100%!important}
     });
   </script>
   
+
+<script id="profile-manager">
+(function () {
+  const SUPABASE_URL = 'https://zpobmwhvhqjcqmaoqtxq.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ruoLdqEOaFEuQjPt5e0Huw_KwKAOp4T';
+
+  const raw = localStorage.getItem('supabase_session');
+  if (!raw) return;
+
+  let session;
+  try {
+    session = JSON.parse(raw);
+  } catch {
+    return;
+  }
+
+  if (!session.user || !session.access_token) return;
+
+  const userId = session.user.id;
+
+  const username = document.getElementById('username');
+  const bio = document.getElementById('bio');
+  const avatarUrl = document.getElementById('avatar-url');
+  const saveButton = document.getElementById('save-profile');
+  const status = document.getElementById('profile-status');
+
+  if (!username || !bio || !avatarUrl || !saveButton) return;
+
+  function showStatus(text, ok) {
+    status.textContent = text;
+    status.style.color = ok ? '#70e0a0' : '#ffb4a6';
+  }
+
+  async function loadProfile() {
+    try {
+      const response = await fetch(
+        SUPABASE_URL +
+        '/rest/v1/profiles?id=eq.' +
+        encodeURIComponent(userId) +
+        '&select=username,bio,avatar_url',
+        {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + session.access_token
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('خطا در دریافت پروفایل');
+      }
+
+      const data = await response.json();
+
+      if (data.length) {
+        username.value = data[0].username || '';
+        bio.value = data[0].bio || '';
+        avatarUrl.value = data[0].avatar_url || '';
+      }
+    } catch (error) {
+      console.error(error);
+      showStatus('دریافت پروفایل ناموفق بود.', false);
+    }
+  }
+
+  async function saveProfile() {
+    const name = username.value.trim();
+    const biography = bio.value.trim();
+    const avatar = avatarUrl.value.trim();
+
+    if (!name) {
+      showStatus('نام کاربری را وارد کن.', false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_آ-ی]{3,30}$/.test(name)) {
+      showStatus('نام کاربری باید ۳ تا ۳۰ کاراکتر و بدون فاصله باشد.', false);
+      return;
+    }
+
+    saveButton.disabled = true;
+    showStatus('در حال ذخیره...', true);
+
+    try {
+      const response = await fetch(
+        SUPABASE_URL + '/rest/v1/profiles?on_conflict=id',
+        {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + session.access_token,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify({
+            id: userId,
+            username: name,
+            bio: biography,
+            avatar_url: avatar,
+            updated_at: new Date().toISOString()
+          })
+        }
+      );
+
+      const result = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        console.error(result);
+        throw new Error(
+          result.message ||
+          result.msg ||
+          'ذخیره پروفایل ناموفق بود.'
+        );
+      }
+
+      showStatus('پروفایل با موفقیت ذخیره شد ✓', true);
+    } catch (error) {
+      console.error(error);
+      showStatus(error.message || 'خطا در ذخیره پروفایل.', false);
+    } finally {
+      saveButton.disabled = false;
+    }
+  }
+
+  saveButton.addEventListener('click', saveProfile);
+  loadProfile();
+})();
+</script>
+
 <script id="supabase-session">
 (() => {
   const raw = localStorage.getItem('supabase_session');
