@@ -1,30 +1,75 @@
-Deno.serve(async () => {
-  const token = Deno.env.get("HF_TOKEN");
+Deno.serve(async (req) => {
+  const cors = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
 
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "Qwen/Qwen2.5-VL-7B-Instruct",
-      messages: [
-        {
-          role: "user",
-          content: "Reply with exactly: MODEL_OK"
-        }
-      ],
-      max_tokens: 20
-    })
-  });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: cors });
+  }
 
-  const text = await response.text();
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Only POST is allowed" }),
+      { status: 405, headers: cors }
+    );
+  }
 
-  return new Response(text, {
-    status: response.status,
-    headers: {
-      "Content-Type": "application/json"
+  try {
+    const token = Deno.env.get("HF_TOKEN");
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "HF_TOKEN is not configured" }),
+        { status: 500, headers: cors }
+      );
     }
-  });
+
+    const body = await req.json();
+
+    const messages = Array.isArray(body.messages)
+      ? body.messages
+      : [
+          {
+            role: "user",
+            content: body.prompt || "سلام",
+          },
+        ];
+
+    const response = await fetch(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "Qwen/Qwen2.5-VL-7B-Instruct",
+          messages,
+          max_tokens: 1200,
+          temperature: 0.3,
+        }),
+      }
+    );
+
+    const text = await response.text();
+
+    return new Response(text, {
+      status: response.status,
+      headers: cors,
+    });
+
+  } catch (error) {
+    console.error("AI ERROR:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: "AI request failed",
+        details: String(error),
+      }),
+      { status: 500, headers: cors }
+    );
+  }
 });

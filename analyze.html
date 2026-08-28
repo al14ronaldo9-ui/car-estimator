@@ -2351,6 +2351,56 @@ async function analyzeCarWithAI(image, results) {
             '<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">🤖 تحلیل کارشناس هوش مصنوعی</div>' +
             '<div>' + aiText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
 
+        // دکمه ادامه تحلیل در دستیار
+        let aiChatBtn = document.getElementById('aiChatContinueBtn');
+
+        if (!aiChatBtn) {
+            aiChatBtn = document.createElement('button');
+            aiChatBtn.id = 'aiChatContinueBtn';
+            aiChatBtn.type = 'button';
+
+            aiChatBtn.innerHTML = `
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none"
+                   xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 3C7.03 3 3 6.58 3 11c0 2.35 1.2 4.47 3.2 5.75L5.5 21l4.1-2.35c.77.23 1.58.35 2.4.35 4.97 0 9-3.58 9-8s-4.03-8-9-8Z"
+                      stroke="currentColor" stroke-width="1.8"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 11h.01M12 11h.01M16 11h.01"
+                      stroke="currentColor" stroke-width="2.4"
+                      stroke-linecap="round"/>
+              </svg>
+              <span>ادامه تحلیل در دستیار هوش مصنوعی</span>
+            `;
+
+            aiChatBtn.style.cssText = `
+              width:100%;
+              margin-top:12px;
+              min-height:46px;
+              border:1px solid rgba(34,211,238,.35);
+              border-radius:12px;
+              background:linear-gradient(135deg,#0e7490,#1d4ed8);
+              color:#fff;
+              font-size:14px;
+              font-weight:800;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              gap:7px;
+              cursor:pointer;
+              box-shadow:0 8px 24px rgba(0,0,0,.22);
+            `;
+
+            aiChatBtn.onclick = function () {
+                sessionStorage.setItem('car_ai_analysis', aiText);
+                sessionStorage.setItem('car_ai_results', JSON.stringify(results || []));
+                sessionStorage.setItem('car_ai_image', imageData);
+
+                window.location.href = 'chat.html';
+            };
+
+            aiBox.appendChild(aiChatBtn);
+        }
+
         setStatus('تحلیل هوش مصنوعی دریافت شد.', 'ok');
 
     } catch (error) {
