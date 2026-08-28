@@ -5666,3 +5666,212 @@ body.forum-ai-open #chat-send:active{
 })();
 </script>
 
+
+<script id="PUBLIC-CHAT-PROFILE-V1">
+(async function () {
+  const SUPABASE_URL = 'https://zpobmwhvhqjcqmaoqtxq.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ruoLdqEOaFEuQjPt5e0Huw_KwKAOp4T';
+
+  const input = document.getElementById('public-chat-input');
+  const send = document.getElementById('public-chat-send');
+  const box = document.getElementById('public-chat-messages');
+
+  if (!input || !send || !box) return;
+
+  let session = null;
+  try {
+    session = JSON.parse(localStorage.getItem('supabase_session') || 'null');
+  } catch (e) {}
+
+  if (!session || !session.access_token || !session.user) {
+    input.disabled = true;
+    input.placeholder = 'برای ارسال پیام ابتدا وارد حساب شوید';
+    send.disabled = true;
+    return;
+  }
+
+  const userId = session.user.id;
+  const token = session.access_token;
+
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  };
+
+  async function getProfile() {
+    const url =
+      SUPABASE_URL +
+      '/rest/v1/profiles?id=eq.' +
+      encodeURIComponent(userId) +
+      '&select=username,bio,avatar_url';
+
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+      console.error('PROFILE ERROR:', await response.text());
+      return {
+        username: session.user.email?.split('@')[0] || 'کاربر',
+        bio: '',
+        avatar_url: ''
+      };
+    }
+
+    const data = await response.json();
+
+    return data[0] || {
+      username: session.user.email?.split('@')[0] || 'کاربر',
+      bio: '',
+      avatar_url: ''
+    };
+  }
+
+  function timeText(date) {
+    try {
+      return new Date(date).toLocaleTimeString('fa-IR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function addPublicMessage(item, profile) {
+    const message = document.createElement('div');
+
+    message.className =
+      'public-message' +
+      (item.user_id === userId ? ' mine' : '');
+
+    const name = document.createElement('div');
+    name.className = 'public-message-name';
+    name.textContent = profile?.username || 'کاربر';
+
+    const text = document.createElement('div');
+    text.className = 'public-message-text';
+    text.textContent = item.text || '';
+
+    const time = document.createElement('div');
+    time.className = 'public-message-time';
+    time.textContent = timeText(item.created_at);
+
+    message.appendChild(name);
+    message.appendChild(text);
+    message.appendChild(time);
+
+    box.appendChild(message);
+  }
+
+  async function loadPublicMessages() {
+    try {
+      const response = await fetch(
+        SUPABASE_URL +
+        '/rest/v1/public_messages?select=id,user_id,text,created_at&order=created_at.asc&limit=100',
+        { headers }
+      );
+
+      if (!response.ok) {
+        console.error('PUBLIC MESSAGES ERROR:', await response.text());
+        return;
+      }
+
+      const data = await response.json();
+
+      const profiles = {};
+
+      for (const item of data) {
+        if (!profiles[item.user_id]) {
+          profiles[item.user_id] = await getProfileById(item.user_id);
+        }
+      }
+
+      const welcome = box.querySelector('.public-welcome');
+      box.innerHTML = '';
+      if (welcome) box.appendChild(welcome);
+
+      for (const item of data) {
+        addPublicMessage(item, profiles[item.user_id]);
+      }
+
+      box.scrollTop = box.scrollHeight;
+
+    } catch (error) {
+      console.error('PUBLIC CHAT:', error);
+    }
+  }
+
+  async function getProfileById(id) {
+    try {
+      const response = await fetch(
+        SUPABASE_URL +
+        '/rest/v1/profiles?id=eq.' +
+        encodeURIComponent(id) +
+        '&select=username,bio,avatar_url',
+        { headers }
+      );
+
+      if (!response.ok) return { username: 'کاربر' };
+
+      const data = await response.json();
+
+      return data[0] || { username: 'کاربر' };
+    } catch (e) {
+      return { username: 'کاربر' };
+    }
+  }
+
+  async function sendPublicMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    send.disabled = true;
+
+    try {
+      const response = await fetch(
+        SUPABASE_URL + '/rest/v1/public_messages',
+        {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            text: text
+          })
+        }
+      );
+
+      if (!response.ok) {
+        console.error('SEND ERROR:', await response.text());
+        alert('ارسال پیام ناموفق بود.');
+        return;
+      }
+
+      input.value = '';
+      await loadPublicMessages();
+
+    } catch (error) {
+      console.error(error);
+      alert('خطا در اتصال به سرور.');
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  }
+
+  send.addEventListener('click', sendPublicMessage);
+
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      sendPublicMessage();
+    }
+  });
+
+  await loadPublicMessages();
+
+  setInterval(loadPublicMessages, 5000);
+})();
+</script>
