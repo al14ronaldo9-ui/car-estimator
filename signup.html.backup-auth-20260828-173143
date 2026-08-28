@@ -136,13 +136,6 @@
           throw new Error(result.msg || result.message || 'ثبت‌نام ناموفق بود.');
         }
 
-        if (result.access_token && result.user) {
-          localStorage.setItem(
-            'supabase_session',
-            JSON.stringify(result)
-          );
-        }
-
         form.reset();
 
         if (result.user && result.user.identities && result.user.identities.length === 0) {

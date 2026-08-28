@@ -723,7 +723,6 @@ body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-heig
   display: none !important;
 }
 </style>
-<link rel="stylesheet" href="premium-ui.css">
 </head>
 <body>
 
@@ -845,7 +844,7 @@ const INPUT_SIZE = 640;
 const PROTO_SIZE = 160;
 const NUM_CLASSES = 6;
 const NUM_COEFFS = 32;
-const CONF_THRESHOLD = 0.50;
+const CONF_THRESHOLD = 0.30;
 const IOU_THRESHOLD = 0.40;
 const MASK_THRESHOLD = 0.5;
 const MASK_SCALE = PROTO_SIZE / INPUT_SIZE;
@@ -965,10 +964,7 @@ function buildMask(coeffs, protoOut) {
   const protos = protoOut.data;
 
   let channelFirst = true;
-  if (pd.length === 4 &&
-      pd[1] === PROTO_SIZE &&
-      pd[2] === PROTO_SIZE &&
-      pd[3] === NUM_COEFFS) {
+  if (pd.length === 4 && pd[1] === PROTO_SIZE && pd[2] === PROTO_SIZE && pd[3] === NUM_COEFFS) {
     channelFirst = false;
   } else if (pd.length === 4 && pd[1] === NUM_COEFFS) {
     channelFirst = true;
@@ -976,24 +972,18 @@ function buildMask(coeffs, protoOut) {
     throw new Error('shape پروتوتایپ ماسک غیرمنتظره: [' + pd.join(',') + ']');
   }
 
-  const mask = new Float32Array(PROTO_SIZE * PROTO_SIZE);
-
+  const mask = new Uint8Array(PROTO_SIZE * PROTO_SIZE);
   for (let p = 0; p < PROTO_SIZE * PROTO_SIZE; p++) {
     let s = 0;
-
     for (let c = 0; c < NUM_COEFFS; c++) {
-      const idx = channelFirst
-        ? c * PROTO_SIZE * PROTO_SIZE + p
-        : p * NUM_COEFFS + c;
-
+      const idx = channelFirst ? c * PROTO_SIZE * PROTO_SIZE + p : p * NUM_COEFFS + c;
       s += coeffs[c] * protos[idx];
     }
-
-    mask[p] = sigmoid(s);
+    mask[p] = s > 0 ? 1 : 0;
   }
-
   return mask;
 }
+
 function analyzeOutput(detOut, protoOut, meta) {
   const data = detOut.data;
   const dims = detOut.dims;
@@ -1398,7 +1388,6 @@ analyzeButton.addEventListener('click', async function () {
 
 async function fetchModelWithProgress(url) {
   const cacheName = 'car-estimator-model-v1';
-  setStatus('شروع دانلود مدل...');
   let cachedResponse = null;
   if ('caches' in window) {
     try {
@@ -1460,16 +1449,16 @@ async function fetchModelWithProgress(url) {
   return allChunks.buffer;
 }
 
-window.loadModel = async function loadModel() {
+async function loadModel() {
   try {
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.simd = false;
 
     const modelUrl = new URL('static/best.onnx', window.location.href).href;
-    setStatus('مرحله ۱: شروع دانلود...'); const modelBuffer = await fetchModelWithProgress(modelUrl); setStatus('مرحله ۲: مدل دانلود شد.');
+    const modelBuffer = await fetchModelWithProgress(modelUrl);
 
-    setStatus('مرحله ۳: شروع ساخت موتور...');
-    setStatus('مرحله ۴: حجم مدل OK، ساخت session...'); session = await ort.InferenceSession.create(modelBuffer, {
+    setStatus('در حال مقداردهی موتور هوش مصنوعی...');
+    session = await ort.InferenceSession.create(modelBuffer, {
       executionProviders: ['wasm']
     });
     dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
@@ -1818,7 +1807,7 @@ window.hideLoading = hideLoading;
   حساب کاربری (اختیاری)
 </a>
 
-  <script src="app-nav.js?v=2"></script>
+  <script src="app-nav.js"></script>
 
 <style>
 /* final hide for floating chat button */
@@ -1827,8 +1816,8 @@ window.hideLoading = hideLoading;
 }
 </style>
 
-
-
+</body>
+</html>
 <!-- ===== گزینه‌های جدید: بازار خودرو و بازه قیمتی ===== -->
 <style>
     .options-row {
@@ -2272,7 +2261,6 @@ analyzeButton.addEventListener('click', async function () {
         setStatus('نمایش نتایج...');
         await new Promise(resolve => requestAnimationFrame(resolve));
         showResultsWithOptions(results);
-        await analyzeCarWithAI(currentImage, results);
 
         if (results.length === 0) {
             setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + ').', 'error');
@@ -2288,76 +2276,6 @@ analyzeButton.addEventListener('click', async function () {
         window.updateAnalyzeButton();
     }
 });
-
-async function analyzeCarWithAI(image, results) {
-    try {
-        setStatus('در حال دریافت نظر کارشناس هوش مصنوعی...');
-
-        const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
-
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-        const response = await fetch(
-            'https://zpobmwhvhqjcqmaoqtxq.supabase.co/functions/v1/ai-car-analysis',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    image: imageData,
-                    prompt: 'این تصویر خودرو را بررسی کن و آسیب‌های قابل مشاهده را به زبان فارسی توضیح بده.'
-                })
-            }
-        );
-
-        const data = await response.json();
-        console.log('AI analysis:', data);
-
-        if (!response.ok) {
-            throw new Error(data.error || 'خطا در دریافت تحلیل AI');
-        }
-
-        window.lastAIAnalysis = data;
-
-        const aiText =
-            data?.choices?.[0]?.message?.content ||
-            data?.choices?.[0]?.message?.reasoning_content ||
-            'پاسخی از مدل دریافت نشد.';
-
-        let aiBox = document.getElementById('aiAnalysisBox');
-
-        if (!aiBox) {
-            aiBox = document.createElement('div');
-            aiBox.id = 'aiAnalysisBox';
-            aiBox.style.cssText =
-                'margin-top:20px;padding:18px;border:1px solid #30363d;border-radius:14px;background:#161b22;color:#f0f6fc;line-height:2;white-space:pre-wrap;';
-
-            const resultCard = document.getElementById('resultCard');
-
-            if (resultCard) {
-                resultCard.appendChild(aiBox);
-            } else {
-                document.body.appendChild(aiBox);
-            }
-        }
-
-        aiBox.innerHTML =
-            '<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">🤖 تحلیل کارشناس هوش مصنوعی</div>' +
-            '<div>' + aiText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
-
-        setStatus('تحلیل هوش مصنوعی دریافت شد.', 'ok');
-
-    } catch (error) {
-        console.error('AI analysis error:', error);
-        setStatus('تحلیل اصلی انجام شد؛ تحلیل AI در دسترس نبود.', 'error');
-    }
-}
 
 async function copyReportToClipboard() {
     const vehicle = getVehicleSelection();
@@ -2421,7 +2339,9 @@ function resetApp() {
   // مدل فقط پس از تعریف تمام توابع و رویدادهای رابط اجرا شود
 
 </script>
-<script>window.loadModel();</script>
-<script>window.loadModel();</script>
 </body>
 </html>
+
+<script>
+  loadModel();
+</script>
