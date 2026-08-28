@@ -1103,6 +1103,85 @@ header .sub{
 </head>
 <body>
 
+<!-- ENGINE LOADING -->
+<div id="engine-loading">
+  <div id="engine-loading-box">
+    <img src="car-loading.jpg" alt="خودرو">
+    <div>در حال آماده‌سازی خودرو...</div>
+    <div id="engine-bar"><span></span></div>
+    <small id="engine-percent">0%</small>
+  </div>
+</div>
+
+<audio id="engine-start-sound" preload="auto">
+  <source src="engine-start.mp3" type="audio/mpeg">
+</audio>
+
+<style>
+#engine-loading{
+  position:fixed;inset:0;z-index:999999;
+  display:flex;align-items:center;justify-content:center;
+  background:#070d16;
+  transition:opacity .6s,visibility .6s;
+}
+#engine-loading.hide{opacity:0;visibility:hidden;pointer-events:none}
+#engine-loading-box{position:relative;z-index:2;
+  width:min(88vw,380px);text-align:center;
+  color:#e8f7ff;font-weight:800;font-size:16px;
+}
+#engine-loading-box img{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  max-height:none;
+  object-fit:cover;
+  border-radius:0;
+  margin:0;
+  filter:brightness(.55) contrast(1.1);
+  z-index:-1;
+}
+#engine-bar{
+  height:6px;background:rgba(255,255,255,.1);
+  border-radius:99px;margin-top:16px;overflow:hidden;
+}
+#engine-bar span{
+  display:block;width:0;height:100%;
+  background:#22d3ee;border-radius:99px;
+  transition:width .08s linear;
+}
+#engine-percent{
+  display:block;margin-top:8px;color:#718096;
+}
+</style>
+
+<script>
+(function(){
+  const load=document.getElementById('engine-loading');
+  const bar=document.querySelector('#engine-bar span');
+  const pct=document.getElementById('engine-percent');
+  const sound=document.getElementById('engine-start-sound');
+
+  if(!load)return;
+
+  sound.play().catch(()=>{});
+
+  let n=0;
+  const timer=setInterval(()=>{
+    n+=Math.random()*5+2;
+    if(n>=100){
+      n=100;
+      clearInterval(timer);
+      setTimeout(()=>load.classList.add('hide'),250);
+    }
+    bar.style.width=n+'%';
+    pct.textContent=Math.floor(n)+'%';
+  },80);
+})();
+</script>
+
+
+
 <main>
 <style id="home-page-style">
 main > header,
