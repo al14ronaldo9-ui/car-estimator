@@ -2401,6 +2401,14 @@ async function analyzeCarWithAI(image, results) {
             aiBox.appendChild(aiChatBtn);
         }
 
+        // همیشه handler را روی دکمه نهایی تنظیم کن
+        aiChatBtn.onclick = function () {
+            sessionStorage.setItem('car_ai_analysis', aiText);
+            sessionStorage.setItem('car_ai_results', JSON.stringify(results || []));
+            sessionStorage.setItem('car_ai_image', imageData);
+            window.location.href = 'chat.html?tab=ai';
+        };
+
         setStatus('تحلیل هوش مصنوعی دریافت شد.', 'ok');
 
     } catch (error) {
