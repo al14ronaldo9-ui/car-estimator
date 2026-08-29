@@ -1155,12 +1155,23 @@ function drawResults(results, img, meta) {
     }
     mctx.putImageData(imgData, 0, 0);
 
+    // تبدیل ماسک 160x160 از فضای letterbox به تصویر اصلی
     const sx = meta.dx * MASK_SCALE;
     const sy = meta.dy * MASK_SCALE;
     const sw = meta.w * MASK_SCALE;
     const sh = meta.h * MASK_SCALE;
 
-    ctx.drawImage(mc, sx, sy, sw, sh, 0, 0, img.naturalWidth, img.naturalHeight);
+    ctx.save();
+    ctx.globalAlpha = 1;
+
+    // کل ماسک روی ناحیه واقعی تصویر قرار می‌گیرد.
+    ctx.drawImage(
+      mc,
+      sx, sy, sw, sh,
+      0, 0, img.naturalWidth, img.naturalHeight
+    );
+
+    ctx.restore();
 
     const bx = r.box.x1;
     const by = r.box.y1;
@@ -2241,7 +2252,13 @@ analyzeButton.addEventListener('click', async function () {
         const outputs = await session.run(feeds);
 
         const names = Object.keys(outputs);
-        dbg('خروجی‌های مدل: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  '));
+        const outputShapes = names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  ');
+        dbg('خروجی‌های مدل: ' + outputShapes);
+
+        if (debugEl) {
+            debugEl.classList.remove('hidden');
+            debugEl.innerHTML += '<div style="direction:ltr;text-align:left;margin:6px 0;">OUTPUT SHAPES: ' + outputShapes + '</div>';
+        }
 
         let out0 = null, out1 = null;
         for (const nm of names) {
