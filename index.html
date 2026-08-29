@@ -1021,10 +1021,18 @@ header .sub{
 <!-- ENGINE LOADING -->
 <div id="engine-loading">
   <div id="engine-loading-box">
-    <img src="car-loading.jpg" alt="خودرو">
-    <div>در حال آماده‌سازی خودرو...</div>
+
+    <img id="loading-car-image" src="car-loading.jpg" alt="خودرو">
+
+    <!-- چراغ‌های متحرک -->
+    <div class="headlight headlight-left"></div>
+    <div class="headlight headlight-right"></div>
+
+    <div class="engine-loading-text">در حال آماده‌سازی خودرو...</div>
+
     <div id="engine-bar"><span></span></div>
     <small id="engine-percent">0%</small>
+
   </div>
 </div>
 
@@ -1056,6 +1064,126 @@ header .sub{
   filter:brightness(.55) contrast(1.1);
   z-index:-1;
 }
+
+/* ===== چراغ‌های لودینگ خودرو ===== */
+
+.headlight{
+  position:fixed;
+  z-index:-1;
+  width:11vw;
+  height:5vw;
+  min-width:55px;
+  min-height:28px;
+  max-width:150px;
+  max-height:75px;
+  border-radius:50%;
+
+  background:radial-gradient(
+    ellipse at center,
+    rgba(255,255,255,1) 0%,
+    rgba(110,225,255,.95) 28%,
+    rgba(0,180,255,.55) 52%,
+    rgba(0,120,255,0) 78%
+  );
+
+  filter:
+    blur(1px)
+    drop-shadow(0 0 8px #22d3ee)
+    drop-shadow(0 0 22px rgba(34,211,238,.8));
+
+  opacity:0;
+  pointer-events:none;
+
+  animation:engineHeadlight 1.8s ease-in-out infinite;
+}
+
+.headlight-left{
+  left:22%;
+  top:57%;
+}
+
+.headlight-right{
+  right:22%;
+  top:57%;
+  animation-delay:.08s;
+}
+
+@keyframes engineHeadlight{
+  0%{
+    opacity:0;
+    transform:scale(.75);
+  }
+
+  12%{
+    opacity:0;
+  }
+
+  18%{
+    opacity:1;
+    transform:scale(1);
+  }
+
+  30%{
+    opacity:1;
+  }
+
+  38%{
+    opacity:0;
+    transform:scale(.85);
+  }
+
+  48%{
+    opacity:0;
+  }
+
+  56%{
+    opacity:1;
+    transform:scale(1.05);
+  }
+
+  70%{
+    opacity:1;
+  }
+
+  78%{
+    opacity:0;
+    transform:scale(.8);
+  }
+
+  100%{
+    opacity:0;
+    transform:scale(.75);
+  }
+}
+
+.engine-loading-text{
+  position:relative;
+  z-index:5;
+  color:#e8f7ff;
+  font-weight:800;
+  font-size:16px;
+  text-shadow:0 0 10px rgba(34,211,238,.25);
+}
+
+@media(max-width:600px){
+  .headlight{
+    width:17vw;
+    height:8vw;
+    min-width:48px;
+    min-height:24px;
+  }
+
+  .headlight-left{
+    left:16%;
+    top:57%;
+  }
+
+  .headlight-right{
+    right:16%;
+    top:57%;
+  }
+}
+
 #engine-bar{
   height:6px;background:rgba(255,255,255,.1);
   border-radius:99px;margin-top:16px;overflow:hidden;
@@ -1079,7 +1207,13 @@ header .sub{
 
   if(!load)return;
 
-  sound.play().catch(()=>{});
+  sound.currentTime = 0;
+  sound.play().then(() => {
+    setTimeout(() => {
+      sound.pause();
+      sound.currentTime = 0;
+    }, 1200);
+  }).catch(() => {});
 
   let n=0;
   const timer=setInterval(()=>{
