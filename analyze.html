@@ -2272,7 +2272,7 @@ analyzeButton.addEventListener('click', async function () {
         setStatus('نمایش نتایج...');
         await new Promise(resolve => requestAnimationFrame(resolve));
         showResultsWithOptions(results);
-        await analyzeCarWithAI(currentImage, results);
+        analyzeCarWithAI(currentImage, results).catch(err => { console.error("Vision AI error:", err); });
 
         if (results.length === 0) {
             setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + ').', 'error');
