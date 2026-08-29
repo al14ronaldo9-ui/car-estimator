@@ -2395,7 +2395,7 @@ async function analyzeCarWithAI(image, results) {
                 sessionStorage.setItem('car_ai_results', JSON.stringify(results || []));
                 sessionStorage.setItem('car_ai_image', imageData);
 
-                window.location.href = 'chat.html';
+                window.location.href = 'chat.html?tab=ai';
             };
 
             aiBox.appendChild(aiChatBtn);
