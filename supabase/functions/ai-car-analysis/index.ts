@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "Qwen/Qwen2.5-VL-7B-Instruct",
+          model: "Qwen/Qwen2.5-72B-Instruct",
           messages,
           max_tokens: 1200,
           temperature: 0.3,
