@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: "zai-org/GLM-4.5V",
           messages,
-          max_tokens: 1200,
+          max_tokens: 2000,
           temperature: 0.3,
         }),
       },
