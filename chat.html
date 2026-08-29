@@ -5168,7 +5168,13 @@ body.forum-ai-open #chat-messages{
       else if (page === 'public') showPublic();
     }, true);
 
-    showAI();
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+
+    if (requestedTab === 'ai') {
+      showAI();
+    } else {
+      showForum();
+    }
 
     console.log('SHARED TABS CONTROLLER: READY');
   }
