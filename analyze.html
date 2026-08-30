@@ -1464,10 +1464,16 @@ window.loadModel = async function loadModel() {
     setStatus('مرحله ۱: شروع دانلود...'); const modelBuffer = await fetchModelWithProgress(modelUrl); setStatus('مرحله ۲: مدل دانلود شد.');
 
     setStatus('مرحله ۳: شروع ساخت موتور...');
-    setStatus('مرحله ۴: حجم مدل OK، ساخت session...'); session = await ort.InferenceSession.create(modelBuffer, {
-      executionProviders: ['wasm']
-    });
-    dbg('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
+    setStatus('مرحله ۴: حجم مدل OK، ساخت session...'); try {
+      session = await ort.InferenceSession.create(modelBuffer, {
+        executionProviders: ['wasm']
+      });
+    } catch (sessionError) {
+      console.error('ONNX SESSION ERROR:', sessionError);
+      console.error('MODEL BYTES:', modelBuffer.byteLength);
+      throw new Error('ساخت Session مدل شکست خورد: ' + (sessionError?.message || sessionError));
+    }
+    console.log('مدل لود شد. ورودی: ' + session.inputNames.join(', '));
     window.updateAnalyzeButton();
     setStatus('مدل آماده به کار است.', 'ok');
     if (currentImage) window.updateAnalyzeButton();
