@@ -763,6 +763,12 @@ body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-heig
                     <option value="">ابتدا دسته خودرو را انتخاب کنید</option>
                 </select>
             </div>
+            <div style="flex:1 1 150px;display:flex;flex-direction:column;gap:6px;">
+                <label for="vehicleYearSelect" style="font-size:0.85rem;color:var(--text-muted);">سال ساخت</label>
+                <select id="vehicleYearSelect" disabled style="width:100%;">
+                    <option value="">ابتدا مدل خودرو را انتخاب کنید</option>
+                </select>
+            </div>
         </div>
 
         <button id="analyzeButton" type="button" disabled>شروع آنالیز تصویر</button>
@@ -772,6 +778,14 @@ body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-heig
 
     <section class="card hidden" id="resultCard">
         <h2>📋 جزئیات خسارت برآورد شده</h2>
+
+        <div id="vehicleResultInfo" style="margin:12px 0 18px;padding:12px 14px;border-radius:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);text-align:center;">
+            <span style="font-weight:bold;">🚗 خودرو:</span>
+            <span id="resultVehicleName">-</span>
+            <span style="margin:0 8px;">|</span>
+            <span style="font-weight:bold;">📅 سال ساخت:</span>
+            <span id="resultVehicleYear">-</span>
+        </div>
         <div class="legend" id="legend"></div>
         <div class="table-responsive">
             <table id="resultTable">
@@ -1094,7 +1108,17 @@ function analyzeOutput(detOut, protoOut, meta) {
       }
     }
 
-    const areaFraction = Math.min(1, (maskPixels * 16) / (meta.w * meta.h));
+    // نسبت مساحت واقعی ماسک به ناحیه تشخیص آسیب
+    // برای قیمت‌گذاری، کل تصویر خودرو معیار مناسبی نیست.
+    const boxArea = Math.max(
+      1,
+      (bx1 - bx0) * (by1 - by0)
+    );
+
+    const areaFraction = Math.min(
+      1,
+      Math.max(0, maskPixels / boxArea)
+    );
     const box = {
       x1: Math.max(0, (d.x1 - meta.dx) / meta.scale),
       y1: Math.max(0, (d.y1 - meta.dy) / meta.scale),
@@ -2087,65 +2111,219 @@ const VEHICLE_GROUPS = {
 function getVehicleSelection() {
   const groupEl = document.getElementById('brandGroupSelect');
   const modelEl = document.getElementById('vehicleModelSelect');
-  if (!groupEl || !modelEl) return null;
+  const yearEl = document.getElementById('vehicleYearSelect');
+
+  if (!groupEl || !modelEl || !yearEl) return null;
+
   const groupKey = groupEl.value;
   const modelKey = modelEl.value;
-  if (!groupKey || !modelKey) return null;
+  const year = yearEl.value;
+
+  if (!groupKey || !modelKey || !year) return null;
+
   const group = VEHICLE_GROUPS[groupKey];
   const model = group && group.models[modelKey];
+
   if (!group || !model) return null;
+
   return {
     groupKey: groupKey,
     modelKey: modelKey,
     groupLabel: group.label,
     modelLabel: model.label,
+    year: Number(year),
+    yearLabel: yearEl.options[yearEl.selectedIndex].textContent,
     multiplier: group.multiplier * model.multiplier
   };
+}
+
+function updateVehicleYears() {
+  const modelEl = document.getElementById('vehicleModelSelect');
+  const yearEl = document.getElementById('vehicleYearSelect');
+
+  if (!modelEl || !yearEl) return;
+
+  yearEl.innerHTML = '';
+
+  if (!modelEl.value) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'ابتدا مدل خودرو را انتخاب کنید';
+    yearEl.appendChild(placeholder);
+    yearEl.disabled = true;
+    window.updateAnalyzeButton();
+    return;
+  }
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'انتخاب سال ساخت...';
+  yearEl.appendChild(placeholder);
+
+  for (let year = 1405; year >= 1380; year--) {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year;
+    yearEl.appendChild(opt);
+  }
+
+  yearEl.disabled = false;
+  window.updateAnalyzeButton();
 }
 
 function updateVehicleModels() {
   const groupEl = document.getElementById('brandGroupSelect');
   const modelEl = document.getElementById('vehicleModelSelect');
-  if (!groupEl || !modelEl) return;
+  const yearEl = document.getElementById('vehicleYearSelect');
+
+  if (!groupEl || !modelEl || !yearEl) return;
+
   const groupKey = groupEl.value;
+
   modelEl.innerHTML = '';
+
   if (!groupKey) {
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'ابتدا دسته خودرو را انتخاب کنید';
     modelEl.appendChild(opt);
     modelEl.disabled = true;
+
+    yearEl.innerHTML = '';
+    const yearOpt = document.createElement('option');
+    yearOpt.value = '';
+    yearOpt.textContent = 'ابتدا مدل خودرو را انتخاب کنید';
+    yearEl.appendChild(yearOpt);
+    yearEl.disabled = true;
   } else {
     const group = VEHICLE_GROUPS[groupKey];
+
     const placeholder = document.createElement('option');
     placeholder.value = '';
     placeholder.textContent = 'انتخاب کنید...';
     modelEl.appendChild(placeholder);
+
     for (const [key, model] of Object.entries(group.models)) {
       const opt = document.createElement('option');
       opt.value = key;
       opt.textContent = model.label;
       modelEl.appendChild(opt);
     }
+
     modelEl.disabled = false;
+
+    yearEl.innerHTML = '';
+    const yearOpt = document.createElement('option');
+    yearOpt.value = '';
+    yearOpt.textContent = 'ابتدا مدل خودرو را انتخاب کنید';
+    yearEl.appendChild(yearOpt);
+    yearEl.disabled = true;
   }
+
   window.updateAnalyzeButton();
 }
 
-function calculateRange(classId, areaFraction, multiplier) {
-  const rule = COST_RULES[classId];
 
-  const area = Math.min(1, Math.max(0, areaFraction || 0));
-  const severity = Math.min(1, Math.max(0.15, area * 4));
+// ===== جدول قیمت پایه بر اساس نوع آسیب و سال ساخت =====
+// قیمت‌ها به تومان هستند.
+// این جدول فعلاً نقطه شروع است و بعداً می‌توانیم قیمت‌های واقعی بازار را وارد کنیم.
+const YEAR_PRICE_TABLE = {
+  1380: {
+    0:{min:1000000,max:2500000}, 1:{min:800000,max:1800000},
+    2:{min:1500000,max:3500000}, 3:{min:1800000,max:4000000},
+    4:{min:2500000,max:5000000}, 5:{min:1000000,max:2500000}
+  },
+  1385: {
+    0:{min:1200000,max:3000000}, 1:{min:1000000,max:2200000},
+    2:{min:1700000,max:4000000}, 3:{min:2000000,max:4500000},
+    4:{min:3000000,max:6000000}, 5:{min:1200000,max:3000000}
+  },
+  1390: {
+    0:{min:1500000,max:3500000}, 1:{min:1200000,max:2500000},
+    2:{min:2000000,max:4500000}, 3:{min:2400000,max:5000000},
+    4:{min:3500000,max:7000000}, 5:{min:1500000,max:3500000}
+  },
+  1395: {
+    0:{min:1800000,max:4000000}, 1:{min:1400000,max:2800000},
+    2:{min:2400000,max:5000000}, 3:{min:2800000,max:5500000},
+    4:{min:4000000,max:8000000}, 5:{min:1800000,max:4000000}
+  },
+  1400: {
+    0:{min:2200000,max:4500000}, 1:{min:1600000,max:3200000},
+    2:{min:2800000,max:5500000}, 3:{min:3200000,max:6500000},
+    4:{min:4500000,max:9000000}, 5:{min:2200000,max:4500000}
+  },
+  1405: {
+    0:{min:2500000,max:5000000}, 1:{min:1800000,max:3500000},
+    2:{min:3000000,max:6000000}, 3:{min:3500000,max:7000000},
+    4:{min:5000000,max:10000000}, 5:{min:2500000,max:5000000}
+  }
+};
+
+// ساخت خودکار قیمت برای سال‌های بین نقاط جدول
+(function expandYearPriceTable() {
+  const anchors = Object.keys(YEAR_PRICE_TABLE)
+    .map(Number)
+    .sort((a,b) => a-b);
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const y1 = anchors[i];
+    const y2 = anchors[i + 1];
+    const gap = y2 - y1;
+
+    for (let year = y1 + 1; year < y2; year++) {
+      const t = (year - y1) / gap;
+      YEAR_PRICE_TABLE[year] = {};
+
+      for (let c = 0; c < NUM_CLASSES; c++) {
+        const a = YEAR_PRICE_TABLE[y1][c];
+        const b = YEAR_PRICE_TABLE[y2][c];
+
+        YEAR_PRICE_TABLE[year][c] = {
+          min: Math.round((a.min + (b.min - a.min) * t) / 100000) * 100000,
+          max: Math.round((a.max + (b.max - a.max) * t) / 100000) * 100000
+        };
+      }
+    }
+  }
+})();
+
+function getYearPriceRule(classId, year) {
+  const years = Object.keys(YEAR_PRICE_TABLE)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const y = Number(year);
+
+  if (!y) return COST_RULES[classId];
+
+  // نزدیک‌ترین سال موجود در جدول
+  let nearest = years[0];
+
+  for (const candidate of years) {
+    if (Math.abs(candidate - y) < Math.abs(nearest - y)) {
+      nearest = candidate;
+    }
+  }
+
+  return YEAR_PRICE_TABLE[nearest][classId] || COST_RULES[classId];
+}
+
+function calculateRange(classId, areaFraction, multiplier, year) {
+  const rule = getYearPriceRule(classId, year);
+
+  const area = Math.min(1, Math.max(0, Number(areaFraction) || 0));
+
+  // مساحت ماسک، مبنای اصلی قیمت است
+  // آسیب خیلی کوچک حداقل ۱۵٪ قیمت پایه و آسیب کامل ۱۰۰٪ قیمت پایه محسوب می‌شود.
+  const severity = Math.min(1, Math.max(0.15, area));
 
   const minCost = Math.round(
-    (rule.min + (rule.max - rule.min) * severity * 0.35) *
-    multiplier / 100000
+    (rule.min * severity * multiplier) / 100000
   ) * 100000;
 
   const maxCost = Math.round(
-    (rule.min + (rule.max - rule.min) * severity * 0.90) *
-    multiplier / 100000
+    (rule.max * severity * multiplier) / 100000
   ) * 100000;
 
   return {
@@ -2171,11 +2349,29 @@ window.updateAnalyzeButton = function () {
 const brandGroupSelect = document.getElementById('brandGroupSelect');
 const vehicleModelSelect = document.getElementById('vehicleModelSelect');
 if (brandGroupSelect) brandGroupSelect.addEventListener('change', updateVehicleModels);
-if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', window.updateAnalyzeButton);
+if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', updateVehicleYears);
 if (brandGroupSelect) updateVehicleModels();
+
+function updateVehicleResultInfo(vehicle) {
+    const nameEl = document.getElementById('resultVehicleName');
+    const yearEl = document.getElementById('resultVehicleYear');
+
+    if (!nameEl || !yearEl) return;
+
+    if (vehicle) {
+        nameEl.textContent =
+            vehicle.groupLabel + ' - ' + vehicle.modelLabel;
+        yearEl.textContent =
+            vehicle.yearLabel;
+    } else {
+        nameEl.textContent = '-';
+        yearEl.textContent = '-';
+    }
+}
 
 function showResultsWithOptions(results) {
     const vehicle = getVehicleSelection();
+    updateVehicleResultInfo(vehicle);
     const counts = {};
     const ranges = {};
     let totalMin = 0;
@@ -2183,7 +2379,12 @@ function showResultsWithOptions(results) {
 
     for (const r of results) {
         counts[r.classId] = (counts[r.classId] || 0) + 1;
-        const range = calculateRange(r.classId, r.areaFraction, vehicle ? vehicle.multiplier : 1);
+        const range = calculateRange(
+            r.classId,
+            r.areaFraction,
+            vehicle ? vehicle.multiplier : 1,
+            vehicle ? vehicle.year : null
+        );
         if (!ranges[r.classId]) {
             ranges[r.classId] = { min: 0, max: 0, scoreSum: 0 };
         }
@@ -2197,7 +2398,14 @@ function showResultsWithOptions(results) {
     const summary = Object.keys(counts)
         .map(k => CLASS_NAMES[k] + '=' + counts[k])
         .join(' | ');
-    dbg('خودرو: ' + (vehicle ? vehicle.groupLabel + ' - ' + vehicle.modelLabel : 'نامشخص') + ' | توزیع: ' + (summary || 'هیچ'));
+    dbg(
+  'خودرو: ' +
+  (vehicle
+    ? vehicle.groupLabel + ' - ' + vehicle.modelLabel +
+      ' - سال ' + vehicle.yearLabel
+    : 'نامشخص') +
+  ' | توزیع: ' + (summary || 'هیچ')
+);
 
     resultBody.innerHTML = '';
     let hasAny = false;
@@ -2437,7 +2645,7 @@ async function analyzeCarWithAI(image, results) {
 async function copyReportToClipboard() {
     const vehicle = getVehicleSelection();
     let text = 'برآورد هزینه خسارت خودرو:\n';
-    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel} - سال ساخت: ${vehicle.yearLabel}\n\n`;
     
     document.querySelectorAll('#resultBody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
@@ -2460,7 +2668,7 @@ async function copyReportToClipboard() {
 async function shareReport() {
     const vehicle = getVehicleSelection();
     let text = 'برآورد هزینه خسارت خودرو:\n';
-    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel}\n\n`;
+    if (vehicle) text += `خودرو: ${vehicle.groupLabel} - ${vehicle.modelLabel} - سال ساخت: ${vehicle.yearLabel}\n\n`;
     
     document.querySelectorAll('#resultBody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
