@@ -7821,3 +7821,112 @@ body {
 }
 
 </style>
+
+<style id="telegram-public-message-fix">
+#public-chat-page .public-message {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: fit-content !important;
+    max-width: 78% !important;
+    margin: 18px 0 10px auto !important;
+    padding: 8px 11px !important;
+    border-radius: 12px !important;
+    background: #182533 !important;
+}
+
+#public-chat-page .public-message.mine {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    background: #2b5278 !important;
+}
+
+#public-chat-page .public-message-user {
+    position: absolute !important;
+    bottom: calc(100% + 4px) !important;
+    right: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: max-content !important;
+    height: 24px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+}
+
+#public-chat-page .public-message-avatar {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+}
+
+#public-chat-page .public-message-name {
+    color: #2aabee !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+}
+
+#public-chat-page .public-message-text {
+    display: inline !important;
+    color: #e9eef3 !important;
+    font-size: 14px !important;
+    line-height: 1.65 !important;
+}
+
+#public-chat-page .public-message-time {
+    align-self: flex-end !important;
+    margin-top: 2px !important;
+    margin-right: 2px !important;
+    color: #8b98a5 !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+}
+
+@media (max-width: 600px) {
+    #public-chat-page .public-message {
+        max-width: 84% !important;
+    }
+}
+</style>
+
+<style id="telegram-public-profile-direction-fix">
+
+/* پیام‌های دیگران: حباب سمت چپ */
+#public-chat-page .public-message:not(.mine) {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+/* پروفایل دیگران بالای سمت چپ */
+#public-chat-page .public-message:not(.mine) .public-message-user {
+    left: 0 !important;
+    right: auto !important;
+    flex-direction: row !important;
+}
+
+/* پیام خود کاربر: حباب سمت راست */
+#public-chat-page .public-message.mine {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+}
+
+/* پروفایل خود کاربر بالای سمت راست */
+#public-chat-page .public-message.mine .public-message-user {
+    right: 0 !important;
+    left: auto !important;
+    flex-direction: row-reverse !important;
+}
+
+/* ساعت پایین حباب */
+#public-chat-page .public-message-time {
+    align-self: flex-end !important;
+    direction: ltr !important;
+    white-space: nowrap !important;
+}
+
+</style>
