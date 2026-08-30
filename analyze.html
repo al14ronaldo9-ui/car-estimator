@@ -885,6 +885,15 @@ const legendEl = $('legend');
 
 
 
+function dbg(msg) {
+  const el = document.getElementById('debugInfo');
+  if (el) {
+    el.classList.remove('hidden');
+    el.textContent += String(msg) + '\n';
+  }
+  console.log('[DEBUG]', msg);
+}
+
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
   statusEl.className = type;
