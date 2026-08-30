@@ -794,13 +794,16 @@ body{line-height:1.7;color:#e6edf3}.sub{color:#8b949e;font-size:.95rem;line-heig
                         <th>نوع آسیب</th>
                         <th style="text-align: center;">تعداد</th>
                         <th style="text-align: center;">اطمینان</th>
-                    <th style="text-align: left;">بازه هزینه (تومان)</th>
+                        <th style="text-align: left;">قطعه (تومان)</th>
+                        <th style="text-align: left;">دستمزد (تومان)</th>
+                        <th style="text-align: left;">بازه خسارت (تومان)</th>
+                        <th style="text-align: left;">جمع (تومان)</th>
                     </tr>
                 </thead>
                 <tbody id="resultBody"></tbody>
                 <tfoot>
                     <tr class="total-row">
-                        <td colspan="3">مجموع برآورد (حداقل تا حداکثر):</td>
+                        <td colspan="6">مجموع کل (قطعه + دستمزد + خسارت):</td>
                         <td id="totalCost" style="text-align: left; font-size: 1rem;">۰</td>
                     </tr>
                 </tfoot>
@@ -859,7 +862,7 @@ const INPUT_SIZE = 640;
 const PROTO_SIZE = 160;
 const NUM_CLASSES = 6;
 const NUM_COEFFS = 32;
-const CONF_THRESHOLD = 0.50;
+const CONF_THRESHOLD = 0.20;
 const IOU_THRESHOLD = 0.40;
 const MASK_THRESHOLD = 0.5;
 const MASK_SCALE = PROTO_SIZE / INPUT_SIZE;
@@ -1046,6 +1049,30 @@ function analyzeOutput(detOut, protoOut, meta) {
       (hasObj ? ' | همراه objectness' : '') + ' | scores: ' + (useSigmoid ? 'sigmoid (logit)' : 'خام (احتمال)'));
 
   const dets = [];
+
+  let debugBestScore = -Infinity;
+  let debugBestClass = -1;
+
+  for (let i = 0; i < dim; i++) {
+    for (let c = 0; c < NUM_CLASSES; c++) {
+      const raw = get(clsStart + c, i);
+      const sc = useSigmoid ? sigmoid(raw) : raw;
+
+      if (sc > debugBestScore) {
+        debugBestScore = sc;
+        debugBestClass = c;
+      }
+    }
+  }
+
+  dbg(
+    'BEST CLASS SCORE: ' +
+    debugBestScore.toFixed(4) +
+    ' | CLASS: ' +
+    debugBestClass +
+    ' | useSigmoid=' +
+    useSigmoid
+  );
   for (let i = 0; i < dim; i++) {
     let bestCls = -1;
     let bestScore = -Infinity;
@@ -1277,7 +1304,7 @@ function showResults(results) {
 
   if (!results.length) {
     resultBody.innerHTML =
-      '<tr><td colspan="3" style="text-align:center;">آسیبی با اطمینان کافی تشخیص داده نشد.</td></tr>';
+      '<tr><td colspan="7" style="text-align:center;">آسیبی با اطمینان کافی تشخیص داده نشد.</td></tr>';
   }
 
   totalCostEl.textContent =
@@ -1339,7 +1366,13 @@ if (needsCompress) {
         preview.src = url2;
         preview.style.display = 'block';
         overlay.style.display = 'none';
-        analyzeButton.disabled = (!session || !document.getElementById("vehicleSelect").value);
+        analyzeButton.disabled = !(
+    session &&
+    currentImage &&
+    document.getElementById("brandGroupSelect")?.value &&
+    document.getElementById("vehicleModelSelect")?.value &&
+    document.getElementById("vehicleYearSelect")?.value
+);
         setStatus(session ? 'تصویر آماده است. روی «بررسی تصویر» بزن.' : 'مدل هنوز بارگذاری نشده...', session ? 'ok' : 'error');
       };
       img.onerror = function () {
@@ -1372,63 +1405,6 @@ img.decoding = 'async';
     setStatus('خطا در خواندن تصویر.', 'error');
   };
   img.src = url;
-});
-
-analyzeButton.addEventListener('click', async function () {
-    return; // هندلر قدیمی غیرفعال شد — مسیر فعال: showResultsWithOptions (رفع اجرای دوباره)
-  if (!session || !currentImage) return;
-  analyzeButton.disabled = true;
-  clearDbg();
-  setStatus('در حال تحلیل تصویر... (چند ثانیه صبر کنید)');
-
-  try {
-    const meta0 = letterbox(currentImage, INPUT_SIZE);
-    const tensor = canvasToTensor(meta0.canvas);
-    const feeds = { [session.inputNames[0]]: tensor };
-    const outputs = await session.run(feeds);
-
-    const names = Object.keys(outputs);
-    dbg('خروجی‌های مدل: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  '));
-
-    let out0 = null, out1 = null;
-    for (const nm of names) {
-      if (outputs[nm].dims.length === 3) out0 = outputs[nm];
-      if (outputs[nm].dims.length === 4) out1 = outputs[nm];
-    }
-
-    if (!out0) {
-      throw new Error('خروجی تشخیص (۳بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
-    }
-    if (!out1) {
-      throw new Error('خروجی پروتوتایپ ماسک (۴بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
-    }
-
-    const meta = {
-      scale: meta0.scale,
-      dx: meta0.dx,
-      dy: meta0.dy,
-      w: meta0.w,
-      h: meta0.h,
-      origW: currentImage.naturalWidth,
-      origH: currentImage.naturalHeight
-    };
-
-    const results = analyzeOutput(out0, out1, meta);
-
-    drawResults(results, currentImage, meta);
-    // رندر قدیمی غیرفعال شد؛ گزارش از مسیر showResultsWithOptions نمایش داده می‌شود
-
-    if (results.length === 0) {
-      setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + '). جزئیات فنی در باکس دیباگ.', 'error');
-    } else {
-      setStatus('تحلیل با موفقیت انجام شد — ' + results.length + ' آسیب شناسایی شد.', 'ok');
-    }
-  } catch (e) {
-    console.error(e);
-    setStatus('خطا در تحلیل: ' + e.message, 'error');
-  } finally {
-    window.updateAnalyzeButton();
-  }
 });
 
 async function fetchModelWithProgress(url) {
@@ -2309,6 +2285,90 @@ function getYearPriceRule(classId, year) {
   return YEAR_PRICE_TABLE[nearest][classId] || COST_RULES[classId];
 }
 
+
+// ===== محاسبه قطعه و دستمزد =====
+// قیمت‌ها تومان هستند و برای شروع «قیمت پایه تخمینی» محسوب می‌شوند.
+// ضریب مدل و سال ساخت روی قیمت قطعه اعمال می‌شود.
+const PART_LABOR_RULES = {
+  0: { // فرورفتگی بدنه
+    part: { min: 0, max: 0 },
+    labor: { min: 2500000, max: 6000000 },
+    name: 'صافکاری/ترمیم بدنه'
+  },
+  1: { // خط و خش عمیق
+    part: { min: 0, max: 0 },
+    labor: { min: 1500000, max: 4500000 },
+    name: 'ترمیم و رنگ'
+  },
+  2: { // ترک خوردگی
+    part: { min: 500000, max: 2500000 },
+    labor: { min: 1000000, max: 3500000 },
+    name: 'تعمیر قطعه'
+  },
+  3: { // شیشه شکسته
+    part: { min: 3000000, max: 12000000 },
+    labor: { min: 1000000, max: 2500000 },
+    name: 'تعویض شیشه'
+  },
+  4: { // شکستگی چراغ
+    part: { min: 5000000, max: 25000000 },
+    labor: { min: 1000000, max: 3500000 },
+    name: 'تعویض چراغ'
+  },
+  5: { // لاستیک پنچر
+    part: { min: 2500000, max: 10000000 },
+    labor: { min: 300000, max: 1000000 },
+    name: 'تعویض/تعمیر لاستیک'
+  }
+};
+
+function calculatePartLabor(classId, areaFraction, multiplier, year) {
+  const rule = PART_LABOR_RULES[classId];
+  if (!rule) {
+    return { partMin: 0, partMax: 0, laborMin: 0, laborMax: 0 };
+  }
+
+  const area = Math.min(1, Math.max(0, Number(areaFraction) || 0));
+
+  // برای بدنه و خط‌وخش، دستمزد مستقیماً با مساحت ماسک تغییر می‌کند.
+  const areaFactor = Math.max(0.15, area);
+
+  // ضریب سن خودرو:
+  // خودروهای قدیمی‌تر معمولاً قطعه ارزان‌تر دارند.
+  const y = Number(year);
+  let yearFactor = 1;
+
+  if (y) {
+    yearFactor = Math.max(0.55, Math.min(1.10, 0.55 + ((y - 1380) / 25) * 0.55));
+  }
+
+  const modelFactor = Number(multiplier) || 1;
+
+  const partMin = Math.round(
+    rule.part.min * modelFactor * yearFactor * areaFactor / 100000
+  ) * 100000;
+
+  const partMax = Math.round(
+    rule.part.max * modelFactor * yearFactor * areaFactor / 100000
+  ) * 100000;
+
+  const laborMin = Math.round(
+    rule.labor.min * areaFactor * modelFactor / 100000
+  ) * 100000;
+
+  const laborMax = Math.round(
+    rule.labor.max * areaFactor * modelFactor / 100000
+  ) * 100000;
+
+  return {
+    partMin: Math.max(0, partMin),
+    partMax: Math.max(partMin, partMax),
+    laborMin: Math.max(100000, laborMin),
+    laborMax: Math.max(laborMin, laborMax),
+    name: rule.name
+  };
+}
+
 function calculateRange(classId, areaFraction, multiplier, year) {
   const rule = getYearPriceRule(classId, year);
 
@@ -2335,14 +2395,8 @@ function calculateRange(classId, areaFraction, multiplier, year) {
 let isAnalyzing = false;
 
 window.updateAnalyzeButton = function () {
-  const modelReady = (typeof session !== 'undefined' && !!session);
-  const imageReady = (typeof currentImage !== 'undefined' && !!currentImage);
-  const vehicleReady =
-    (typeof getVehicleSelection === 'function' && !!getVehicleSelection());
-
-  if (typeof analyzeButton !== 'undefined' && analyzeButton) {
-    analyzeButton.disabled = isAnalyzing || !(modelReady && imageReady && vehicleReady);
-  }
+  const ready = !!session && !!currentImage && !!getVehicleSelection();
+  if (analyzeButton) analyzeButton.disabled = isAnalyzing || !ready;
 };
 
 // ===== اتصال رویدادهای انتخاب خودرو =====
@@ -2350,6 +2404,7 @@ const brandGroupSelect = document.getElementById('brandGroupSelect');
 const vehicleModelSelect = document.getElementById('vehicleModelSelect');
 if (brandGroupSelect) brandGroupSelect.addEventListener('change', updateVehicleModels);
 if (vehicleModelSelect) vehicleModelSelect.addEventListener('change', updateVehicleYears);
+const vehicleYearSelect = document.getElementById("vehicleYearSelect"); if (vehicleYearSelect) vehicleYearSelect.addEventListener("change", window.updateAnalyzeButton);
 if (brandGroupSelect) updateVehicleModels();
 
 function updateVehicleResultInfo(vehicle) {
@@ -2379,20 +2434,46 @@ function showResultsWithOptions(results) {
 
     for (const r of results) {
         counts[r.classId] = (counts[r.classId] || 0) + 1;
+
         const range = calculateRange(
             r.classId,
             r.areaFraction,
             vehicle ? vehicle.multiplier : 1,
             vehicle ? vehicle.year : null
         );
+
+        const partLabor = calculatePartLabor(
+            r.classId,
+            r.areaFraction,
+            vehicle ? vehicle.multiplier : 1,
+            vehicle ? vehicle.year : null
+        );
+
+        const rowMin = range.min + partLabor.partMin + partLabor.laborMin;
+        const rowMax = range.max + partLabor.partMax + partLabor.laborMax;
+
         if (!ranges[r.classId]) {
-            ranges[r.classId] = { min: 0, max: 0, scoreSum: 0 };
+            ranges[r.classId] = {
+                min: 0,
+                max: 0,
+                scoreSum: 0,
+                partMin: 0,
+                partMax: 0,
+                laborMin: 0,
+                laborMax: 0
+            };
         }
+
         ranges[r.classId].min += range.min;
         ranges[r.classId].max += range.max;
+        ranges[r.classId].partMin += partLabor.partMin;
+        ranges[r.classId].partMax += partLabor.partMax;
+        ranges[r.classId].laborMin += partLabor.laborMin;
+        ranges[r.classId].laborMax += partLabor.laborMax;
         ranges[r.classId].scoreSum += r.score;
-        totalMin += range.min;
-        totalMax += range.max;
+
+        totalMin += rowMin;
+        totalMax += rowMax;
     }
 
     const summary = Object.keys(counts)
@@ -2416,18 +2497,52 @@ function showResultsWithOptions(results) {
         const color = CLASS_COLORS[c];
         const avgScore = Math.round(ranges[c].scoreSum / counts[c] * 100);
         const tr = document.createElement('tr');
+
+        const partText =
+            ranges[c].partMin.toLocaleString('fa-IR') +
+            ' تا ' +
+            ranges[c].partMax.toLocaleString('fa-IR');
+
+        const laborText =
+            ranges[c].laborMin.toLocaleString('fa-IR') +
+            ' تا ' +
+            ranges[c].laborMax.toLocaleString('fa-IR');
+
+        const damageText =
+            ranges[c].min.toLocaleString('fa-IR') +
+            ' تا ' +
+            ranges[c].max.toLocaleString('fa-IR');
+
+        const rowTotalMin =
+            ranges[c].min +
+            ranges[c].partMin +
+            ranges[c].laborMin;
+
+        const rowTotalMax =
+            ranges[c].max +
+            ranges[c].partMax +
+            ranges[c].laborMax;
+
+        const totalText =
+            rowTotalMin.toLocaleString('fa-IR') +
+            ' تا ' +
+            rowTotalMax.toLocaleString('fa-IR');
+
         tr.innerHTML = `
             <td><span class="dot" style="background: rgb(${color[0]},${color[1]},${color[2]})"></span> ${CLASS_NAMES[c]}</td>
             <td style="text-align: center; font-weight: bold;">${counts[c]}</td>
             <td style="text-align: center; font-weight: bold; color: #a78bfa;">${avgScore}٪</td>
-            <td style="text-align: left; font-weight: bold; color: #38bdf8;">${ranges[c].min.toLocaleString('fa-IR')} تا ${ranges[c].max.toLocaleString('fa-IR')}</td>
+            <td style="text-align: left; font-weight: bold; color: #38bdf8;">${partText}</td>
+            <td style="text-align: left; font-weight: bold; color: #f59e0b;">${laborText}</td>
+            <td style="text-align: left; font-weight: bold; color: #22c55e;">${damageText}</td>
+            <td style="text-align: left; font-weight: bold; color: #38bdf8;">${totalText}</td>
         `;
         resultBody.appendChild(tr);
     }
 
     if (!hasAny) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="4" style="text-align: center; color: var(--text-muted);">آسیبی با اطمینان کافی تشخیص داده نشد.</td>';
+        tr.innerHTML = '<td colspan="7" style="text-align: center; color: var(--text-muted);">آسیبی با اطمینان کافی تشخیص داده نشد.</td>';
         resultBody.appendChild(tr);
     }
 
@@ -2444,6 +2559,7 @@ analyzeButton.addEventListener('click', async function () {
 
     isAnalyzing = true;
     window.updateAnalyzeButton();
+    console.log("ANALYZE CLICK FIRED");
     showLoading();
     clearDbg();
 
@@ -2455,10 +2571,10 @@ analyzeButton.addEventListener('click', async function () {
         const tensor = canvasToTensor(meta0.canvas);
         const feeds = { [session.inputNames[0]]: tensor };
 
+        console.time("MODEL_RUN");
         setStatus('تشخیص آسیب با هوش مصنوعی...');
-        await new Promise(resolve => requestAnimationFrame(resolve));
         const outputs = await session.run(feeds);
-
+        console.timeEnd("MODEL_RUN");
         const names = Object.keys(outputs);
         const outputShapes = names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  ');
         dbg('خروجی‌های مدل: ' + outputShapes);
@@ -2649,7 +2765,7 @@ async function copyReportToClipboard() {
     
     document.querySelectorAll('#resultBody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length === 4) {
+        if (cells.length === 7) {
             text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد (اطمینان: ${cells[2].textContent.trim()}) - هزینه: ${cells[3].textContent.trim()}\n`;
         }
     });
@@ -2672,7 +2788,7 @@ async function shareReport() {
     
     document.querySelectorAll('#resultBody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length === 4) {
+        if (cells.length === 7) {
             text += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} مورد - هزینه: ${cells[3].textContent.trim()}\n`;
         }
     });
@@ -2704,7 +2820,6 @@ function resetApp() {
   // مدل فقط پس از تعریف تمام توابع و رویدادهای رابط اجرا شود
 
 </script>
-<script>window.loadModel();</script>
 <script>window.loadModel();</script>
 </body>
 </html>
