@@ -881,24 +881,9 @@ const resultCard = $('resultCard');
 const resultBody = $('resultBody');
 const totalCostEl = $('totalCost');
 const legendEl = $('legend');
-const debugEl = $('debugInfo');
-
-/* EARLIEST_UPDATE_ANALYZE_BUTTON_FALLBACK */
-window.updateAnalyzeButton = function () {
-  // تا تعریف کامل تابع در اسکریپت‌های بعدی، فقط از توقف برنامه جلوگیری می‌کند.
-};
 
 
-function dbg(msg) {
-  console.log('[debug]', msg);
-}
 
-function clearDbg() {
-  if (debugEl) {
-    debugEl.innerHTML = '';
-    debugEl.classList.add('hidden');
-  }
-}
 
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
@@ -1397,7 +1382,6 @@ img.decoding = 'async';
     preview.style.display = 'block';
     overlay.style.display = 'none';
     resultCard.classList.add('hidden');
-    clearDbg();
     window.updateAnalyzeButton();
     setStatus(session ? 'تصویر آماده است. روی «شروع آنالیز تصویر» بزنید.' : 'مدل هنوز بارگذاری نشده است...', session ? 'ok' : 'error');
   };
@@ -1494,6 +1478,14 @@ window.loadModel = async function loadModel() {
 }
 
 buildLegend();
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 
 <script id="analysis-button-animation-script">
@@ -1532,6 +1524,14 @@ buildLegend();
 
   window.addEventListener('error', stopAnimation);
 })();
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 
 
@@ -1564,10 +1564,26 @@ function hideLoading() {
 */
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 
 <script>
   // اجرای مدل پس از تعریف کامل توابع انتخاب خودرو
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 
 <!-- Global Chat -->
@@ -1798,6 +1814,14 @@ window.hideLoading = hideLoading;
     if (chatWindow.classList.contains('active')) loadMessages();
   }, 5000);
 })();
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 
 
@@ -2550,6 +2574,7 @@ function showResultsWithOptions(results) {
     totalCostEl.textContent = totalMin.toLocaleString('fa-IR') + ' تا ' + totalMax.toLocaleString('fa-IR') + ' تومان';
 
     resultCard.classList.remove('hidden');
+    sessionStorage.setItem("carEstimatorResult", resultCard.innerHTML);
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 // ===== پچ کردن کلیک دکمه آنالیز =====
@@ -2559,30 +2584,20 @@ analyzeButton.addEventListener('click', async function () {
 
     isAnalyzing = true;
     window.updateAnalyzeButton();
-    console.log("ANALYZE CLICK FIRED");
     showLoading();
-    clearDbg();
 
     try {
         setStatus('آماده‌سازی عکس...');
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const meta0 = letterbox(currentImage, INPUT_SIZE);
         const tensor = canvasToTensor(meta0.canvas);
         const feeds = { [session.inputNames[0]]: tensor };
 
-        console.time("MODEL_RUN");
         setStatus('تشخیص آسیب با هوش مصنوعی...');
         const outputs = await session.run(feeds);
-        console.timeEnd("MODEL_RUN");
         const names = Object.keys(outputs);
-        const outputShapes = names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  ');
-        dbg('خروجی‌های مدل: ' + outputShapes);
 
-        if (debugEl) {
-            debugEl.classList.remove('hidden');
-            debugEl.innerHTML += '<div style="direction:ltr;text-align:left;margin:6px 0;">OUTPUT SHAPES: ' + outputShapes + '</div>';
-        }
 
         let out0 = null, out1 = null;
         for (const nm of names) {
@@ -2808,13 +2823,28 @@ async function shareReport() {
 
 function resetApp() {
     currentImage = null;
-    document.getElementById('uploadButton').value = '';
-    document.getElementById('analyzeButton').disabled = true;
-    document.getElementById('resultCard').classList.add('hidden');
-    document.getElementById('resultBody').innerHTML = '';
-    setStatus('آماده برای انتخاب تصویر جدید.', 'info');
+    sessionStorage.removeItem("carEstimatorResult");
+    const uploadButton = document.getElementById("uploadButton"); if (uploadButton) uploadButton.value = "";
+    const analyzeButton = document.getElementById("analyzeButton"); if (analyzeButton) analyzeButton.disabled = true;
+    const resultCard = document.getElementById("resultCard"); if (resultCard) resultCard.classList.add("hidden");
+    const resultBody = document.getElementById("resultBody"); if (resultBody) resultBody.innerHTML = "";
+    if (overlay) { overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height); overlay.style.display = "none"; }
+    const preview = document.getElementById("preview"); if (preview) { preview.src = ""; preview.style.display = "none"; }
+    const brandGroupSelect = document.getElementById("brandGroupSelect"); if (brandGroupSelect) brandGroupSelect.value = "";
+    const vehicleModelSelect = document.getElementById("vehicleModelSelect"); if (vehicleModelSelect) { vehicleModelSelect.innerHTML = '<option value="">ابتدا دسته خودرو را انتخاب کنید</option>'; vehicleModelSelect.disabled = true; }
+    const vehicleYearSelect = document.getElementById("vehicleYearSelect"); if (vehicleYearSelect) { vehicleYearSelect.innerHTML = '<option value="">ابتدا مدل خودرو را انتخاب کنید</option>'; vehicleYearSelect.disabled = true; }
+    setStatus("آماده برای انتخاب تصویر جدید.", "info");
 }
+window.resetApp = resetApp;
 
+window.addEventListener("DOMContentLoaded", function () {
+    const savedResult = sessionStorage.getItem("carEstimatorResult");
+    const resultCard = document.getElementById("resultCard");
+    if (savedResult && resultCard) {
+        resultCard.innerHTML = savedResult;
+        resultCard.classList.remove("hidden");
+    }
+});
 </script>
 <script>
   // مدل فقط پس از تعریف تمام توابع و رویدادهای رابط اجرا شود
