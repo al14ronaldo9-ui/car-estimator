@@ -4,8 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ثبت‌نام کاربر</title>
-  <style>
-    * { box-sizing: border-box; }
+  
+
+
+
+
+
+
+<style>
+* { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -59,9 +66,9 @@
       color: #ffb4a6;
     }
     #status.success { color: #70e0a0; }
-  </style>
 
-<style id="unified-account-v2">
+
+
 
 /* ===== Unified Account UI V2 ===== */
 
@@ -160,10 +167,9 @@ select:focus{
   }
 }
 
-</style>
 
 
-<style id="premium-chat-account-ui">
+
 :root{
 --p-bg:#070b12;--p-card:rgba(17,24,39,.82);--p-border:rgba(148,163,184,.14);
 --p-text:#f8fafc;--p-muted:#94a3b8;--p-primary:#06b6d4;--p-secondary:#3b82f6;
@@ -232,8 +238,48 @@ body{padding-left:10px!important;padding-right:10px!important}
 main{width:100%!important}
 .card,main.card{border-radius:20px!important}
 }
-</style>
 
+
+
+  #signup-form,
+  body > h1,
+  .signup-title {
+    display: none !important;
+  }
+
+  #account-auth-box {
+    margin: 0 0 18px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+
+  #account-auth-box .auth-email {
+    color: #9aa7b7;
+    font-size: 12px;
+    margin-top: 5px;
+    direction: ltr;
+    text-align: right;
+  }
+
+  #account-logout {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255,90,90,.12);
+    color: #ff8f8f;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  #account-logout:active {
+    transform: scale(.98);
+  }
+</style>
 </head>
 <body>
   <main class="card">
@@ -589,46 +635,7 @@ main{width:100%!important}
 </script>
 
 
-<style id="account-auth-ui">
-  #signup-form,
-  body > h1,
-  .signup-title {
-    display: none !important;
-  }
 
-  #account-auth-box {
-    margin: 0 0 18px;
-    padding: 16px;
-    border-radius: 16px;
-    background: rgba(255,255,255,.045);
-    border: 1px solid rgba(255,255,255,.08);
-  }
-
-  #account-auth-box .auth-email {
-    color: #9aa7b7;
-    font-size: 12px;
-    margin-top: 5px;
-    direction: ltr;
-    text-align: right;
-  }
-
-  #account-logout {
-    width: 100%;
-    margin-top: 14px;
-    padding: 12px;
-    border: 0;
-    border-radius: 12px;
-    background: rgba(255,90,90,.12);
-    color: #ff8f8f;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
-  }
-
-  #account-logout:active {
-    transform: scale(.98);
-  }
-</style>
 
 <script id="account-auth-ui-script">
 (function () {

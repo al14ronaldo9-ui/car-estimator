@@ -1,6 +1,10 @@
 name: Deploy AI Function
 
 on:
+  push:
+    paths:
+      - 'supabase/functions/ai-car-analysis/**'
+      - '.github/workflows/deploy-ai.yml'
   workflow_dispatch:
 
 jobs:

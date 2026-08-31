@@ -1,2 +1,7 @@
-
-*.backup-*
+# Local backups / scratch files
+*.backup*
+*.bak
+*.before-*
+*.zip
+scroll-test.js
+PY

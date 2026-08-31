@@ -1018,21 +1018,21 @@ header .sub{
 </head>
 <body>
 
-<!-- ENGINE LOADING -->
-<div id="engine-loading">
-  <div id="engine-loading-box">
-
-    <img id="loading-car-image" src="car-loading.jpg" alt="خودرو">
-
-    <!-- چراغ‌های متحرک -->
-    <div class="headlight headlight-left"></div>
-    <div class="headlight headlight-right"></div>
-
-    <div class="engine-loading-text">در حال آماده‌سازی خودرو...</div>
-
-    <div id="engine-bar"><span></span></div>
-    <small id="engine-percent">0%</small>
-
+<!-- صفحه شروع -->
+<div id="engine-loading" aria-label="در حال آماده‌سازی سامانه">
+  <div class="loading-grid" aria-hidden="true"></div>
+  <div class="loading-glow loading-glow-a" aria-hidden="true"></div>
+  <div class="loading-glow loading-glow-b" aria-hidden="true"></div>
+  <div class="loading-panel">
+    <div class="loading-mark" aria-hidden="true">
+      <span class="mark-ring"></span>
+      <span class="mark-car">⌁</span>
+    </div>
+    <div class="loading-title">برآورد خودرو</div>
+    <div class="loading-subtitle">سامانه هوشمند تشخیص و برآورد خسارت</div>
+    <div class="loading-status" id="engine-loading-text">در حال آماده‌سازی...</div>
+    <div class="loading-progress" aria-hidden="true"><span id="engine-bar-fill"></span></div>
+    <div class="loading-percent" id="engine-percent">۰٪</div>
   </div>
 </div>
 
@@ -1040,169 +1040,35 @@ header .sub{
   <source src="engine-start.mp3" type="audio/mpeg">
 </audio>
 
-<style>
-#engine-loading{
-  position:fixed;inset:0;z-index:999999;
-  display:flex;align-items:center;justify-content:center;
-  background:#070d16;
-  transition:opacity .6s,visibility .6s;
-}
+<style id="loading-screen-v2">
+#engine-loading{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;overflow:hidden;background:#02050a;color:#effbff;transition:opacity .55s ease,visibility .55s ease;font-family:Vazirmatn,Tahoma,sans-serif}
 #engine-loading.hide{opacity:0;visibility:hidden;pointer-events:none}
-#engine-loading-box{position:relative;z-index:2;
-  width:min(88vw,380px);text-align:center;
-  color:#e8f7ff;font-weight:800;font-size:16px;
-}
-#engine-loading-box img{
-  position:fixed;
-  inset:0;
-  width:100vw;
-  height:100vh;
-  max-height:none;
-  object-fit:cover;
-  border-radius:0;
-  margin:0;
-  filter:brightness(.55) contrast(1.1);
-  z-index:-1;
-}
-
-/* ===== چراغ‌های لودینگ خودرو ===== */
-
-.headlight{
-  position:fixed;
-  z-index:-1;
-  width:11vw;
-  height:5vw;
-  min-width:55px;
-  min-height:28px;
-  max-width:150px;
-  max-height:75px;
-  border-radius:50%;
-
-  background:radial-gradient(
-    ellipse at center,
-    rgba(255,255,255,1) 0%,
-    rgba(110,225,255,.95) 28%,
-    rgba(0,180,255,.55) 52%,
-    rgba(0,120,255,0) 78%
-  );
-
-  filter:
-    blur(1px)
-    drop-shadow(0 0 8px #22d3ee)
-    drop-shadow(0 0 22px rgba(34,211,238,.8));
-
-  opacity:0;
-  pointer-events:none;
-
-  animation:engineHeadlight 1.8s ease-in-out infinite;
-}
-
-.headlight-left{
-  left:22%;
-  top:57%;
-}
-
-.headlight-right{
-  right:22%;
-  top:57%;
-  animation-delay:.08s;
-}
-
-@keyframes engineHeadlight{
-  0%{
-    opacity:0;
-    transform:scale(.75);
-  }
-
-  12%{
-    opacity:0;
-  }
-
-  18%{
-    opacity:1;
-    transform:scale(1);
-  }
-
-  30%{
-    opacity:1;
-  }
-
-  38%{
-    opacity:0;
-    transform:scale(.85);
-  }
-
-  48%{
-    opacity:0;
-  }
-
-  56%{
-    opacity:1;
-    transform:scale(1.05);
-  }
-
-  70%{
-    opacity:1;
-  }
-
-  78%{
-    opacity:0;
-    transform:scale(.8);
-  }
-
-  100%{
-    opacity:0;
-    transform:scale(.75);
-  }
-}
-
-.engine-loading-text{
-  position:relative;
-  z-index:5;
-  color:#e8f7ff;
-  font-weight:800;
-  font-size:16px;
-  text-shadow:0 0 10px rgba(34,211,238,.25);
-}
-
-@media(max-width:600px){
-  .headlight{
-    width:17vw;
-    height:8vw;
-    min-width:48px;
-    min-height:24px;
-  }
-
-  .headlight-left{
-    left:16%;
-    top:57%;
-  }
-
-  .headlight-right{
-    right:16%;
-    top:57%;
-  }
-}
-
-#engine-bar{
-  height:6px;background:rgba(255,255,255,.1);
-  border-radius:99px;margin-top:16px;overflow:hidden;
-}
-#engine-bar span{
-  display:block;width:0;height:100%;
-  background:#22d3ee;border-radius:99px;
-  transition:width .08s linear;
-}
-#engine-percent{
-  display:block;margin-top:8px;color:#718096;
-}
+.loading-grid{position:absolute;inset:-20%;background-image:linear-gradient(rgba(56,189,248,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.045) 1px,transparent 1px);background-size:42px 42px;transform:perspective(500px) rotateX(58deg) translateY(20%);mask-image:linear-gradient(to bottom,transparent,#000 35%,transparent 100%);animation:loadingGrid 7s linear infinite}
+.loading-glow{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none}
+.loading-glow-a{width:45vw;height:45vw;background:rgba(14,165,233,.14);top:-18vw;right:-12vw}
+.loading-glow-b{width:38vw;height:38vw;background:rgba(37,99,235,.12);bottom:-18vw;left:-12vw}
+.loading-panel{position:relative;width:min(88vw,430px);padding:34px 26px;text-align:center;background:linear-gradient(180deg,rgba(8,16,28,.72),rgba(3,8,15,.58));border:1px solid rgba(125,211,252,.13);border-radius:28px;box-shadow:0 30px 90px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.04);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.loading-mark{position:relative;width:82px;height:82px;margin:0 auto 18px;display:grid;place-items:center;border-radius:24px;background:linear-gradient(145deg,rgba(14,165,233,.18),rgba(37,99,235,.08));border:1px solid rgba(103,232,249,.25);box-shadow:0 0 35px rgba(14,165,233,.12)}
+.mark-ring{position:absolute;inset:9px;border:1px solid rgba(103,232,249,.45);border-top-color:transparent;border-radius:50%;animation:loadingSpin 2.8s linear infinite}
+.mark-car{font-size:38px;line-height:1;color:#67e8f9;text-shadow:0 0 22px rgba(34,211,238,.55);transform:rotate(-8deg)}
+.loading-title{font-size:25px;font-weight:950;letter-spacing:-.5px}
+.loading-subtitle{margin-top:8px;color:#91a8bd;font-size:12px;line-height:1.9}
+.loading-status{margin-top:26px;color:#dff9ff;font-size:12px;font-weight:800}
+.loading-progress{height:5px;margin-top:13px;border-radius:99px;overflow:hidden;background:rgba(148,163,184,.12)}
+.loading-progress span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22d3ee);box-shadow:0 0 16px rgba(34,211,238,.55);transition:width .08s linear}
+.loading-percent{margin-top:8px;color:#6f879c;font-size:10px;font-variant-numeric:tabular-nums}
+@keyframes loadingSpin{to{transform:rotate(360deg)}}
+@keyframes loadingGrid{to{transform:perspective(500px) rotateX(58deg) translateY(24%)}}
+@media(max-width:520px){.loading-panel{padding:30px 20px;border-radius:24px}.loading-title{font-size:22px}.loading-subtitle{font-size:11px}.loading-mark{width:72px;height:72px}}
+@media(prefers-reduced-motion:reduce){.mark-ring,.loading-grid{animation:none}}
 </style>
 
 <script>
 (function(){
   const load=document.getElementById('engine-loading');
-  const bar=document.querySelector('#engine-bar span');
+  const bar=document.getElementById('engine-bar-fill');
   const pct=document.getElementById('engine-percent');
+  const status=document.getElementById('engine-loading-text');
   const sound=document.getElementById('engine-start-sound');
 
   if(!load)return;
@@ -1224,7 +1090,9 @@ header .sub{
       setTimeout(()=>load.classList.add('hide'),250);
     }
     bar.style.width=n+'%';
-    pct.textContent=Math.floor(n)+'%';
+    const percent=Math.floor(n);
+    pct.textContent=percent.toLocaleString('fa-IR')+'٪';
+    if(status) status.textContent = percent < 35 ? 'در حال آماده‌سازی...' : percent < 70 ? 'در حال بارگذاری سامانه...' : percent < 96 ? 'در حال راه‌اندازی ابزارها...' : 'آماده ورود';
   },80);
 })();
 </script>
@@ -1719,23 +1587,26 @@ const CLASS_COLORS = [
 ];
 
 
-  const COST_RULES = [
-    { base: 5000000,  perArea: 3000000 }, // فرورفتگی
-    { base: 2000000,  perArea: 1500000 }, // خط و خش
-    { base: 4000000,  perArea: 4000000 }, // ترک
-    { base: 12000000, perArea: 6000000 }, // شیشه شکسته
-    { base: 5000000,  perArea: 4000000 }, // چراغ شکسته
-    { base: 3500000,  perArea: 2500000 }  // لاستیک پنچر
-  ];
+const COST_RULES = [
+  { base: 1000000, perArea: 5000000 }, // فرورفتگی
+  { base: 1200000, perArea: 4000000 }, // خط و خش
+  { base: 1500000, perArea: 5000000 }, // ترک
+  { base: 4000000, perArea: 2000000 }, // شیشه شکسته
+  { base: 5000000, perArea: 8000000 }, // چراغ شکسته
+  { base: 2200000, perArea: 4000000 }  // لاستیک پنچر
+];
 
 
 const INPUT_SIZE = 640;
 const PROTO_SIZE = 160;
 const NUM_CLASSES = 6;
 const NUM_COEFFS = 32;
-const CONF_THRESHOLD = 0.30;
+const CONF_THRESHOLD = 0.55;
 const IOU_THRESHOLD = 0.40;
 const MASK_THRESHOLD = 0.5;
+const MIN_MASK_BOX_FRACTION = 0.08;
+const MIN_DETECTION_BOX_AREA = 0.025;
+const MAX_DETECTION_BOX_AREA = 0.92;
 const MASK_SCALE = PROTO_SIZE / INPUT_SIZE;
 const CHANNEL_ORDER = 'RGB';
 
@@ -1973,6 +1844,21 @@ function analyzeOutput(detOut, protoOut, meta) {
       }
     }
 
+    const boxArea640 = Math.max(1, (bx1 - bx0) * (by1 - by0));
+    const maskInBoxFraction = maskPixels / boxArea640;
+    const boxAreaFraction = Math.max(0, ((d.x2 - d.x1) * (d.y2 - d.y1)) / (INPUT_SIZE * INPUT_SIZE));
+    const boxAspect = Math.max(0.01, (d.x2 - d.x1)) / Math.max(0.01, (d.y2 - d.y1));
+
+    // این مدل فقط آسیب را تشخیص می‌دهد و کلاس «خودرو» ندارد؛
+    // بنابراین تشخیص‌های کوچک/بدشکل یا ماسک‌های ضعیف را قبل از قیمت‌گذاری حذف می‌کنیم.
+    // این گیت جلوی بسیاری از false-positive ها روی اشیای غیرخودرو را می‌گیرد.
+    if (maskInBoxFraction < MIN_MASK_BOX_FRACTION ||
+        boxAreaFraction < MIN_DETECTION_BOX_AREA ||
+        boxAreaFraction > MAX_DETECTION_BOX_AREA ||
+        boxAspect < 0.18 || boxAspect > 5.5) {
+      continue;
+    }
+
     const areaFraction = Math.min(1, (maskPixels * 16) / (meta.w * meta.h));
     const box = {
       x1: Math.max(0, (d.x1 - meta.dx) / meta.scale),
@@ -1987,7 +1873,9 @@ function analyzeOutput(detOut, protoOut, meta) {
       box,
       box640: { x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2 },
       mask160,
-      areaFraction
+      areaFraction,
+      maskInBoxFraction,
+      boxAreaFraction
     });
   }
   return results;
@@ -2067,55 +1955,6 @@ function drawResults(results, img, meta) {
 
   preview.style.display = 'block';
   overlay.style.display = 'block';
-}
-
-function showResults(results) {
-  const counts = {};
-  const costs = {};
-  let total = 0;
-
-  for (const r of results) {
-    counts[r.classId] = (counts[r.classId] || 0) + 1;
-    const rule = COST_RULES[r.classId];
-    const cost = Math.round((rule.base + rule.perArea * r.areaFraction) / 10000) * 10000;
-    costs[r.classId] = (costs[r.classId] || 0) + cost;
-    total += cost;
-  }
-
-  const summary = Object.keys(counts)
-    .map(k => CLASS_NAMES[k] + '=' + counts[k])
-    .join(' | ');
-  dbg('توزیع کلاس‌ها: ' + (summary || 'هیچ'));
-
-  resultBody.innerHTML = '';
-  let hasAny = false;
-
-  for (let c = 0; c < NUM_CLASSES; c++) {
-    if (!counts[c]) continue;
-    hasAny = true;
-    const color = CLASS_COLORS[c];
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>
-        <span class="dot" style="background: rgb(${color[0]},${color[1]},${color[2]})"></span>
-        ${CLASS_NAMES[c]}
-      </td>
-      <td style="text-align: center; font-weight: bold;">${counts[c]}</td>
-      <td style="text-align: left; font-weight: bold; color: #38bdf8;">${costs[c].toLocaleString('fa-IR')}</td>
-    `;
-    resultBody.appendChild(tr);
-  }
-
-  if (!hasAny) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="3" style="text-align: center; color: var(--text-muted);">آسیبی با اطمینان کافی تشخیص داده نشد.</td>';
-    resultBody.appendChild(tr);
-  }
-
-  totalCostEl.textContent = total.toLocaleString('fa-IR') + ' تومان';
-  resultCard.classList.remove('hidden');
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function buildLegend() {
@@ -2203,65 +2042,10 @@ img.decoding = 'async';
   img.src = url;
 });
 
-analyzeButton.addEventListener('click', async function () {
-    return; // هندلر قدیمی غیرفعال شد — مسیر فعال: showResultsWithOptions (رفع اجرای دوباره)
-  if (!session || !currentImage) return;
-  analyzeButton.disabled = true;
-  clearDbg();
-  setStatus('در حال تحلیل تصویر... (چند ثانیه صبر کنید)');
 
-  try {
-    const meta0 = letterbox(currentImage, INPUT_SIZE);
-    const tensor = canvasToTensor(meta0.canvas);
-    const feeds = { [session.inputNames[0]]: tensor };
-    const outputs = await session.run(feeds);
-
-    const names = Object.keys(outputs);
-    dbg('خروجی‌های مدل: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join('  |  '));
-
-    let out0 = null, out1 = null;
-    for (const nm of names) {
-      if (outputs[nm].dims.length === 3) out0 = outputs[nm];
-      if (outputs[nm].dims.length === 4) out1 = outputs[nm];
-    }
-
-    if (!out0) {
-      throw new Error('خروجی تشخیص (۳بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
-    }
-    if (!out1) {
-      throw new Error('خروجی پروتوتایپ ماسک (۴بعدی) پیدا نشد. shapes: ' + names.map(n => n + ':[' + outputs[n].dims.join(',') + ']').join(' '));
-    }
-
-    const meta = {
-      scale: meta0.scale,
-      dx: meta0.dx,
-      dy: meta0.dy,
-      w: meta0.w,
-      h: meta0.h,
-      origW: currentImage.naturalWidth,
-      origH: currentImage.naturalHeight
-    };
-
-    const results = analyzeOutput(out0, out1, meta);
-
-    drawResults(results, currentImage, meta);
-    // رندر قدیمی غیرفعال شد؛ گزارش از مسیر showResultsWithOptions نمایش داده می‌شود
-
-    if (results.length === 0) {
-      setStatus('آسیبی با اطمینان کافی پیدا نشد (آستانه: ' + CONF_THRESHOLD + '). جزئیات فنی در باکس دیباگ.', 'error');
-    } else {
-      setStatus('تحلیل با موفقیت انجام شد — ' + results.length + ' آسیب شناسایی شد.', 'ok');
-    }
-  } catch (e) {
-    console.error(e);
-    setStatus('خطا در تحلیل: ' + e.message, 'error');
-  } finally {
-    window.updateAnalyzeButton();
-  }
-});
 
 async function fetchModelWithProgress(url) {
-  const cacheName = 'car-estimator-model-v1';
+  const cacheName = 'car-estimator-model-v3';
   let cachedResponse = null;
   if ('caches' in window) {
     try {
@@ -2328,7 +2112,7 @@ async function loadModel() {
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.simd = false;
 
-    const modelUrl = new URL('static/best.onnx', window.location.href).href;
+    const modelUrl = new URL('static/best.onnx?v=20260830-01', window.location.href).href;
     const modelBuffer = await fetchModelWithProgress(modelUrl);
 
     setStatus('در حال مقداردهی موتور هوش مصنوعی...');
@@ -2986,10 +2770,15 @@ function updateVehicleModels() {
 
 function calculateRange(classId, areaFraction, multiplier) {
   const rule = COST_RULES[classId];
-  const central = rule.base + rule.perArea * areaFraction;
-  const minCost = Math.round(central * 0.80 * multiplier / 10000) * 10000;
-  const maxCost = Math.round(central * 1.20 * multiplier / 10000) * 10000;
-  return { min: minCost, max: maxCost };
+  if (!rule) return { min: 0, max: 0 };
+
+  const coverage = Math.min(1, Math.max(0, Number(areaFraction) || 0));
+  const severity = Math.min(1, Math.max(0.15, coverage * 12));
+  const central = rule.base + rule.perArea * severity;
+  const modelFactor = Number(multiplier) || 1;
+  const minCost = Math.round(central * 0.85 * modelFactor / 100000) * 100000;
+  const maxCost = Math.round(central * 1.15 * modelFactor / 100000) * 100000;
+  return { min: Math.max(100000, minCost), max: Math.max(minCost, maxCost) };
 }
 
 let isAnalyzing = false;
@@ -3068,7 +2857,6 @@ function showResultsWithOptions(results) {
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 // ===== پچ کردن کلیک دکمه آنالیز =====
-const originalClickHandler = analyzeButton.click;
 analyzeButton.addEventListener('click', async function () {
     if (isAnalyzing || !session || !currentImage) return;
 
