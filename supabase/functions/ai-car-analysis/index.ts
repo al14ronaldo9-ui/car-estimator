@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       const rfResponse = await fetch(
         `https://serverless.roboflow.com/${modelId}?api_key=${encodeURIComponent(
           rfKey,
-        )}&confidence=35&overlap=30&image_type=base64&format=json`,
+        )}&confidence=10&overlap=30&image_type=base64&format=json`,
         {
           method: "POST",
           headers: {
